@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db import transaction
 from distutils.util import strtobool
 from rest_framework.request import Request
 from django.contrib.auth import authenticate
@@ -17,6 +18,8 @@ from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
 from django.utils import timezone
 from datetime import timedelta
+from rest_framework.pagination import PageNumberPagination
+
 
 from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
     Contact, ConfirmEmailToken
@@ -357,3 +360,317 @@ class LoginAccount(APIView):
                 return 'Неверный пароль'
         except User.DoesNotExist:
             return 'Пользователь с таким email не найден'
+        
+
+class StandardPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class CategoryView(ListAPIView):
+    """
+    Класс для просмотра категорий
+    """
+    queryset = Category.objects.all().order_by('name') 
+    serializer_class = CategorySerializer
+    pagination_class = StandardPagination 
+
+
+class ShopView(ListAPIView):
+    """
+    Класс для просмотра списка магазинов
+    """
+    queryset = Shop.objects.filter(state=True).order_by('name') а
+    serializer_class = ShopSerializer
+
+
+class ProductInfoView(APIView):
+    """
+    Класс для поиска и фильтрации товаров
+    """
+    def get(self, request: Request, *args, **kwargs):
+        """
+        Поиск товаров с фильтрацией по магазину, категории и другим параметрам
+        """
+        query = Q(shop__state=True)
+        shop_id = request.query_params.get('shop_id')
+        category_id = request.query_params.get('category_id')
+
+        if shop_id:
+            query = query & Q(shop_id=shop_id)
+
+        if category_id:
+            query = query & Q(product__category_id=category_id)
+
+        # фильтруем и отбрасываем дуликаты
+        queryset = ProductInfo.objects.filter(
+            query).select_related(
+            'shop', 'product__category').prefetch_related(
+            'product_parameters__parameter').distinct()
+
+        serializer = ProductInfoSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+    
+
+class BasketView(APIView):
+    """
+    Класс для управления корзиной 
+    """
+
+    def get(self, request: Request, *args, **kwargs):
+        """
+        Получить содержимое корзины
+        """
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'Status': False, 'Error': 'Требуется авторизация'}, 
+                status=403
+            )
+
+        try:
+            basket = Order.objects.filter(
+            user_id=request.user.id, state='basket').prefetch_related(
+            'ordered_items__product_info__product__category',
+            'ordered_items__product_info__product_parameters__parameter').annotate(
+            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+
+            if not basket:
+                return Response({
+                    'Status': True,
+                    'Message': 'Корзина пуста',
+                    'Data': []
+                })
+
+            serializer = OrderSerializer(basket, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            return JsonResponse(
+                {'Status': False, 'Error': f'Ошибка при получении корзины: {str(e)}'},
+                status=500
+                )
+    
+    def post(self, request: Request, *args, **kwargs):
+        """
+        Добавить товары в корзину
+        """
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'Status': False, 'Error': 'Требуется авторизация'}, 
+                status=403
+            )
+
+        item_string = request.data.get('items')
+        if not item_string:
+            return JsonResponse(
+                {'Status': False, 'Errors': 'Не указаны товары для добавления'},
+                status=400
+            )
+
+        try:
+            if not isinstance(item_string, list):
+                return JsonResponse(
+                    {'Status': False, 'Errors': 'Items должен быть списком'},
+                    status=400
+                )
+
+            basket, _ = Order.objects.get_or_create(
+                user_id=request.user.id, 
+                state='basket'
+            )
+
+            objects_created = 0
+            errors = []
+
+            with transaction.atomic():
+                for item_data in item_string:
+                    # Валидация 
+                    if not all(key in item_data for key in ['product_info', 'quantity']):
+                        errors.append(f"Отсутствуют обязательные поля в item: {item_data}")
+                        continue
+
+                    # Проверяем наличие товара
+                    try:
+                        product_info = ProductInfo.objects.get(
+                            id=item_data['product_info'],
+                            shop__state=True,
+                            quantity__gte=item_data.get('quantity', 1)
+                        )
+                    except ProductInfo.DoesNotExist:
+                        errors.append(f"Товар с ID {item_data['product_info']} не найден или недоступен")
+                        continue
+
+                    # Проверяем количество
+                    quantity = item_data['quantity']
+                    if quantity <= 0:
+                        errors.append(f"Некорректное количество: {quantity}")
+                        continue
+
+                    # Создаем или обновляем позицию в корзине
+                    order_item, created = OrderItem.objects.get_or_create(
+                        order=basket,
+                        product_info=product_info,
+                        defaults={'quantity': quantity}
+                    )
+
+                    if not created:
+                        # Если товар уже в корзине,то увеличиваем количество
+                        new_quantity = order_item.quantity + quantity
+                        if new_quantity <= product_info.quantity:
+                            order_item.quantity = new_quantity
+                            order_item.save()
+                        else:
+                            errors.append(f"Недостаточно товара {product_info.product.name}. Доступно: {product_info.quantity}")
+                            continue
+                    
+                    objects_created += 1
+
+            response_data = {'Status': True, 'Добавлено объектов': objects_created}
+            if errors:
+                response_data['Errors'] = errors
+                
+            return JsonResponse(response_data)
+
+        except Exception as e:
+            return JsonResponse(
+                {'Status': False, 'Errors': f'Ошибка при добавлении в корзину: {str(e)}'},
+                status=500
+            )
+        
+
+    def put(self, request: Request, *args, **kwargs):
+        """
+        Обновить количество товаров в корзине
+        """
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'Status': False, 'Error': 'Требуется авторизация'}, 
+                status=403
+            )
+
+        items = request.data.get('items')
+        if not items or not isinstance(items, list):
+            return JsonResponse(
+                {'Status': False, 'Errors': 'Не указаны товары для обновления'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            basket = Order.objects.filter(
+                user_id=request.user.id, 
+                state='basket'
+            ).first()
+
+            if not basket:
+                return JsonResponse(
+                    {'Status': False, 'Errors': 'Корзина не найдена'},
+                    status=404
+                )
+
+            objects_updated = 0
+            errors = []
+
+            with transaction.atomic():
+                for item_data in items:
+                    if not all(key in item_data for key in ['id', 'quantity']):
+                        errors.append(f"Отсутствуют обязательные поля в item: {item_data}")
+                        continue
+
+                    try:
+                        order_item = OrderItem.objects.get(
+                            id=item_data['id'],
+                            order=basket
+                        )
+                    except OrderItem.DoesNotExist:
+                        errors.append(f"Позиция с ID {item_data['id']} не найдена в корзине")
+                        continue
+
+                    quantity = item_data['quantity']
+                  
+                    if quantity <= 0:
+                        order_item.delete()
+                        objects_updated += 1
+                    elif quantity <= order_item.product_info.quantity:
+                        order_item.quantity = quantity
+                        order_item.save()
+                        objects_updated += 1
+                    else:
+                        errors.append(
+                            f"Недостаточно товара {order_item.product_info.product.name}. "
+                            f"Доступно: {order_item.product_info.quantity}"
+                        )
+
+            response_data = {'Status': True, 'Обновлено объектов': objects_updated}
+            if errors:
+                response_data['Errors'] = errors
+                
+            return JsonResponse(response_data)
+
+        except Exception as e:
+            return JsonResponse(
+                {'Status': False, 'Errors': f'Ошибка при обновлении корзины: {str(e)}'},
+                status=500
+            )
+       
+    def delete(self, request: Request, *args, **kwargs):
+        """
+        Удалить товары из корзины
+        """
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'Status': False, 'Error': 'Требуется авторизация'}, 
+                status=403
+            )
+
+        items = request.data.get('items')
+        if not items:
+            return JsonResponse(
+                {'Status': False, 'Errors': 'Не указаны товары для удаления'},
+                status=400
+            )
+
+        try:
+            basket = Order.objects.filter(
+                user_id=request.user.id, 
+                state='basket'
+            ).first()
+
+            if not basket:
+                return JsonResponse(
+                    {'Status': False, 'Errors': 'Корзина не найдена'},
+                    status=404
+                )
+
+            if isinstance(items, str):
+                item_ids = [int(id.strip()) for id in items.split(',') if id.strip().isdigit()]
+            elif isinstance(items, list):
+                item_ids = [int(item_id) for item_id in items if str(item_id).isdigit()]
+            else:
+                return JsonResponse(
+                    {'Status': False, 'Errors': 'Неверный формат items'},
+                    status=400
+                )
+
+            if not item_ids:
+                return JsonResponse(
+                    {'Status': False, 'Errors': 'Не указаны ID товаров'},
+                    status=400
+                )
+
+            deleted_count, _ = OrderItem.objects.filter(
+                order=basket,
+                id__in=item_ids
+            ).delete()
+
+            return JsonResponse({
+                'Status': True, 
+                'Удалено объектов': deleted_count
+            })
+
+        except Exception as e:
+            return JsonResponse(
+                {'Status': False, 'Errors': f'Ошибка при удалении из корзины: {str(e)}'},
+                status=500
+            )

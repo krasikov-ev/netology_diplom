@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.db import transaction
-from distutils.util import strtobool
+# from distutils.util import strtobool
+from setuptools._distutils.util import strtobool
 from rest_framework.request import Request
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -19,6 +20,7 @@ from yaml import load as load_yaml, Loader
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.pagination import PageNumberPagination
+from .models import User
 
 
 from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
@@ -117,7 +119,7 @@ class PartnerUpdate(APIView):
 
 class RegisterAccount(APIView):
     """
-    Класс для регистрации покупателей
+    Класс для регистрации пользователей
     """
 
     def post(self, request, *args, **kwargs):
@@ -141,7 +143,8 @@ class RegisterAccount(APIView):
                     return JsonResponse({
                         'Status': False, 
                         'Errors': 'Пользователь с таким email уже существует'
-                    })
+                    },
+                    status=400)
 
                 user_serializer = UserSerializer(data=request.data)
                 if user_serializer.is_valid():
@@ -149,6 +152,7 @@ class RegisterAccount(APIView):
                     user = user_serializer.save()
                     user.set_password(request.data['password'])
                     user.is_active = False  
+                    user.save()
 
                     # Создаем токен подтверждения
                     token = ConfirmEmailToken.objects.create(user=user)
@@ -160,7 +164,7 @@ class RegisterAccount(APIView):
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
 
     def _send_confirmation_email(self, email, token):
         """
@@ -203,9 +207,10 @@ class ConfirmAccount(APIView):
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse({
-                    'Status': False, 
-                    'Errors': 'Неправильно указан токен или email'
-                })
+                    'Status': False,'Errors': 'Неправильно указан токен или email'
+                    },
+                    status=400
+                    )
 
         return JsonResponse({
             'Status': False, 
@@ -283,15 +288,18 @@ class AccountDetails(APIView):
             )
         
 
+
+
 class LoginAccount(APIView):
     """
     Класс для авторизации пользователей
     """
-
+    
     def post(self, request, *args, **kwargs):
         """
         Аутентификация пользователя
         """
+       
         # Проверяем обязательные аргументы
         if not {'email', 'password'}.issubset(request.data):
             return JsonResponse(
@@ -299,7 +307,8 @@ class LoginAccount(APIView):
                 status=400
             )
 
-        email = request.data['email'].strip().lower()
+        # email = request.data['email'].strip().lower()
+        email = request.data['email'].strip()
         password = request.data['password']
 
         # Аутентификация пользователя
@@ -373,7 +382,7 @@ class ShopView(ListAPIView):
     """
     Класс для просмотра списка магазинов
     """
-    queryset = Shop.objects.filter(state=True).order_by('name') а
+    queryset = Shop.objects.filter(state=True).order_by('name')
     serializer_class = ShopSerializer
 
 

@@ -1,0 +1,397 @@
+
+@baseUrl = http://localhost:8000
+@apiUrl = {{baseUrl}}/api/v1  
+### ============================================
+### 1. РЕГИСТРАЦИЯ И АВТОРИЗАЦИЯ
+### ============================================
+
+### Регистрация нового пользователя (покупателя)
+POST {{apiUrl}}/user/register
+Content-Type: application/json
+
+{
+    "first_name": "2",
+    "last_name": "2",
+    "email": "aa17@example.com",
+    "password": "securePass123",
+    "company": "ООО Ромашка",
+    "position": "Менеджер по закупкам"
+}
+
+### Регистрация магазина (поставщика)
+POST {{apiUrl}}/user/register
+Content-Type: application/json
+
+{
+    "first_name": "Петр",
+    "last_name": "Петров",
+    "email": "shop@example.com",
+    "password": "ShopPass123",
+    "company": "Электронный магазин",
+    "position": "Директор",
+    "type": "shop"
+}
+
+### Подтверждение email (токен будет в консоли сервера)
+POST {{apiUrl}}/user/register/confirm
+Content-Type: application/json
+
+{
+    "email": "aa16@example.com",
+    "token": "e49e31457f7c78fa43d158addf8e7041b1996bc946fbb02"
+}
+
+### Авторизация пользователя
+# @name login
+POST {{apiUrl}}/user/login
+Content-Type: application/json
+
+{
+    "email": "aa13@example.com",
+    "password": "securePass123"
+}
+
+### Сохраняем токен для последующих запросов
+@authToken = {{login.response.body.$.Token}}
+
+### Авторизация магазина
+# @name shopLogin
+POST {{apiUrl}}/user/login
+Content-Type: application/json
+
+{
+    "email": "shop@example.com",
+    "password": "ShopPass123"
+}
+
+@shopToken = {{shopLogin.response.body.$.Token}}
+
+### ============================================
+### 2. РАБОТА С КОНТАКТАМИ (АДРЕСА ДОСТАВКИ)
+### ============================================
+
+### Получить все контакты пользователя
+GET {{apiUrl}}/user/contact
+Authorization: Token {{authToken}}
+
+### Добавить новый контакт (адрес доставки)
+POST {{apiUrl}}/user/contact
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "city": "Москва",
+    "street": "Ленина",
+    "house": "15",
+    "apartment": "42",
+    "phone": "+79991234567",
+    "is_primary": true
+}
+
+### Добавить второй контакт
+POST {{apiUrl}}/user/contact
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "city": "Санкт-Петербург",
+    "street": "Невский проспект",
+    "house": "25",
+    "structure": "А",
+    "phone": "+79997654321"
+}
+
+### ============================================
+### 3. КАТАЛОГ ТОВАРОВ И МАГАЗИНЫ
+### ============================================
+
+### Получить список всех магазинов
+GET {{apiUrl}}/shops
+
+### Получить список категорий
+GET {{apiUrl}}/categories
+
+### Поиск товаров (без фильтров)
+GET {{apiUrl}}/products
+
+### Поиск товаров с фильтрацией
+GET {{apiUrl}}/products/?category_id=1&shop_id=1
+
+### Поиск товаров в наличии
+GET {{apiUrl}}/products/?in_stock=true
+
+### Поиск по названию
+GET {{apiUrl}}/products/?search=смартфон
+
+### ============================================
+### 4. РАБОТА С КОРЗИНОЙ
+### ============================================
+
+### Получить корзину (пустая)
+GET {{apiUrl}}/basket
+Authorization: Token {{authToken}}
+
+### Добавить товары в корзину
+# Предполагаем что product_info с id=1 и id=2 существуют
+POST {{apiUrl}}/basket
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "items": [
+        {"product_info": 1, "quantity": 2},
+        {"product_info": 2, "quantity": 1}
+    ]
+}
+
+### Получить корзину (с товарами)
+GET {{apiUrl}}/basket
+Authorization: Token {{authToken}}
+
+### Обновить количество товаров в корзине
+PUT {{apiUrl}}/basket
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "items": [
+        {"id": 1, "quantity": 3},
+        {"id": 2, "quantity": 2}
+    ]
+}
+
+### Удалить товар из корзины
+DELETE {{apiUrl}}/basket
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "items": [2]
+}
+
+### ============================================
+### 5. ОФОРМЛЕНИЕ ЗАКАЗА
+### ============================================
+
+### Оформить заказ из корзины
+# Предполагаем что contact с id=1 существует
+POST {{apiUrl}}/order
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "id": 1,  # ID корзины (order в состоянии 'basket')
+    "contact": 1
+}
+
+### Получить список заказов пользователя
+GET {{apiUrl}}/order
+Authorization: Token {{authToken}}
+
+### Получить заказы с фильтрацией по статусу
+GET {{apiUrl}}/order/?state=new
+Authorization: Token {{authToken}}
+
+### ============================================
+### 6. API ДЛЯ МАГАЗИНОВ (ПОСТАВЩИКОВ)
+### ============================================
+
+### Получить статус магазина
+GET {{apiUrl}}/partner/state
+Authorization: Token {{shopToken}}
+
+### Изменить статус приема заказов
+POST {{apiUrl}}/partner/state
+Authorization: Token {{shopToken}}
+Content-Type: application/json
+
+{
+    "state": "true"
+}
+
+### Импорт прайс-листа магазина (пример YAML URL)
+POST {{apiUrl}}/partner/update
+Authorization: Token {{shopToken}}
+Content-Type: application/json
+
+{
+    "url": "https://raw.githubusercontent.com/netology-code/python-final-diplom/master/data/shop1.yaml"
+}
+
+### Получить заказы для магазина
+GET {{apiUrl}}/partner/orders
+Authorization: Token {{shopToken}}
+
+### ============================================
+### 7. УПРАВЛЕНИЕ АККАУНТОМ
+### ============================================
+
+### Получить данные пользователя
+GET {{apiUrl}}/user/details
+Authorization: Token {{authToken}}
+
+### Обновить данные пользователя
+POST {{apiUrl}}/user/details
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "first_name": "Иван Обновленный",
+    "company": "Новая компания"
+}
+
+### Сменить пароль
+POST {{apiUrl}}/user/details
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "password": "NewSecurePass456"
+}
+
+### ============================================
+### 8. ТЕСТОВЫЕ ДАННЫЕ (если есть админка)
+### ============================================
+
+### Создать тестовые категории (через админку)
+POST {{apiUrl}}/admin/backend/category/add
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "name": "Электроника"
+}
+
+### Создать тестовый товар (через админку)
+POST {{apiUrl}}/admin/backend/product/add
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "name": "Смартфон Samsung",
+    "category": 1
+}
+
+### ============================================
+### 9. ПОЛНЫЙ СЦЕНАРИЙ ИСПОЛЬЗОВАНИЯ
+### ============================================
+
+### Шаг 1: Регистрация
+# @name registerUser
+POST {{apiUrl}}/user/register
+Content-Type: application/json
+
+{
+    "first_name": "Тестовый",
+    "last_name": "Пользователь",
+    "email": "test_user@example.com",
+    "password": "TestPass123",
+    "company": "Тестовая компания",
+    "position": "Тестировщик"
+}
+
+### Шаг 2: Авторизация
+# @name testLogin
+POST {{apiUrl}}/user/login
+Content-Type: application/json
+
+{
+    "email": "test_user@example.com",
+    "password": "TestPass123"
+}
+
+@testToken = {{testLogin.response.body.$.Token}}
+
+### Шаг 3: Добавить контакт
+POST {{apiUrl}}/user/contact
+Authorization: Token {{testToken}}
+Content-Type: application/json
+
+{
+    "city": "Казань",
+    "street": "Баумана",
+    "house": "10",
+    "phone": "+79991112233",
+    "is_primary": true
+}
+
+### Шаг 4: Посмотреть товары
+GET {{apiUrl}}/products
+Authorization: Token {{testToken}}
+
+### Шаг 5: Добавить в корзину
+POST {{apiUrl}}/basket
+Authorization: Token {{testToken}}
+Content-Type: application/json
+
+{
+    "items": [
+        {"product_info": 1, "quantity": 1},
+        {"product_info": 2, "quantity": 2}
+    ]
+}
+
+### Шаг 6: Оформить заказ
+POST {{apiUrl}}/order
+Authorization: Token {{testToken}}
+Content-Type: application/json
+
+{
+    "id": 2,  # ID новой корзины
+    "contact": 2  # ID нового контакта
+}
+
+### Шаг 7: Проверить заказы
+GET {{apiUrl}}/order
+Authorization: Token {{testToken}}
+
+### Шаг 8: Проверить детали заказа
+GET {{apiUrl}}/order/1
+Authorization: Token {{testToken}}
+
+### ============================================
+### 10. ДОПОЛНИТЕЛЬНЫЕ ТЕСТЫ
+### ============================================
+
+### Тест на неавторизованный доступ (должен вернуть 403)
+GET {{apiUrl}}/user/contact
+
+### Тест с неверными данными
+POST {{apiUrl}}/user/login
+Content-Type: application/json
+
+{
+    "email": "wrong@example.com",
+    "password": "wrongpassword"
+}
+
+### Тест валидации регистрации (неполные данные)
+POST {{apiUrl}}/user/register
+Content-Type: application/json
+
+{
+    "first_name": "Только",
+    "last_name": "Имя"
+    # Отсутствуют обязательные поля
+}
+
+### Тест корзины с несуществующим товаром
+POST {{apiUrl}}/basket
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "items": [
+        {"product_info": 9999, "quantity": 1}
+    ]
+}
+
+### Тест оформления заказа с несуществующим контактом
+POST {{apiUrl}}/order
+Authorization: Token {{authToken}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "contact": 9999
+}

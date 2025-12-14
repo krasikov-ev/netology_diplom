@@ -32,28 +32,71 @@ from backend.serializers import UserSerializer, CategorySerializer, ShopSerializ
     OrderItemSerializer, OrderSerializer, ContactSerializer
 from backend.signals import new_user_registered, new_order
 
+# class PartnerUpdate(APIView):
+#     """
+#     Класс для обновления информации  поставщика
+#     """
+
+#     def post(self, request, *args, **kwargs):
+#         """
+#         Импорт прайс-листа поставщика из YAML файла по URL
+#         """
+#         if not request.user.is_authenticated:
+#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+#         if request.user.type != 'shop':
+#             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+
+#         url = request.data.get('url')
+#         if url:
+#             validate_url = URLValidator()
+#             try:
+#                 validate_url(url)
+#             except ValidationError as e:
+#                 return JsonResponse({'Status': False, 'Error': str(e)})
+#             else:
+#                 stream = get(url).content
+
+#                 data = load_yaml(stream, Loader=Loader)
+
+#                 shop, _ = Shop.objects.get_or_create(name=data['shop'], user_id=request.user.id)
+#                 for category in data['categories']:
+#                     category_object, _ = Category.objects.get_or_create(id=category['id'], name=category['name'])
+#                     category_object.shops.add(shop.id)
+#                     category_object.save()
+#                 ProductInfo.objects.filter(shop_id=shop.id).delete()
+#                 for item in data['goods']:
+#                     product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
+
+#                     product_info = ProductInfo.objects.create(product_id=product.id,
+#                                                               external_id=item['id'],
+#                                                               model=item['model'],
+#                                                               price=item['price'],
+#                                                               price_rrc=item['price_rrc'],
+#                                                               quantity=item['quantity'],
+#                                                               shop_id=shop.id)
+#                     for name, value in item['parameters'].items():
+#                         parameter_object, _ = Parameter.objects.get_or_create(name=name)
+#                         ProductParameter.objects.create(product_info_id=product_info.id,
+#                                                         parameter_id=parameter_object.id,
+#                                                         value=value)
+
+#                 return JsonResponse({'Status': True})
+
+#         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+
+
 # Create your views here.
 class PartnerUpdate(APIView):
     """
-    A class for updating partner information.
-
-    Methods:
-    - post: Update the partner information.
-
-    Attributes:
-    - None
+    Класс для обновления информации  поставщика
     """
 
     def post(self, request, *args, **kwargs):
         """
-                Update the partner price list information.
-
-                Args:
-                - request (Request): The Django request object.
-
-                Returns:
-                - JsonResponse: The response indicating the status of the operation and any errors.
-                """
+        Импорт прайс-листа поставщика из YAML файла по URL
+        """
         # Аутентинтификация
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
@@ -452,12 +495,27 @@ class BasketView(APIView):
             )
 
         try:
+            # basket = Order.objects.filter(
+            # user_id=request.user.id, state='basket').prefetch_related(
+            # 'ordered_items__product_info__product__category',
+            # 'ordered_items__product_info__product_parameters__parameter').annotate(
+            # total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+
             basket = Order.objects.filter(
             user_id=request.user.id, state='basket').prefetch_related(
             'ordered_items__product_info__product__category',
             'ordered_items__product_info__product_parameters__parameter').annotate(
-            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).first()
 
+            # Если корзина существует но пуста - удаляем ее
+            if basket and not basket.ordered_items.exists():
+                basket.delete()
+                return Response({
+                    'Status': True,
+                    'Message': 'Корзина пуста',
+                    'Data': []
+                })
+            
             if not basket:
                 return Response({
                     'Status': True,
@@ -698,58 +756,7 @@ class BasketView(APIView):
             )
 
 
-class PartnerUpdate(APIView):
-    """
-    Класс для обновления информации о поставщике
-    """
 
-    def post(self, request, *args, **kwargs):
-        """
-        Импорт прайс-листа поставщика из YAML файла по URL
-        """
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-        if request.user.type != 'shop':
-            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
-
-        url = request.data.get('url')
-        if url:
-            validate_url = URLValidator()
-            try:
-                validate_url(url)
-            except ValidationError as e:
-                return JsonResponse({'Status': False, 'Error': str(e)})
-            else:
-                stream = get(url).content
-
-                data = load_yaml(stream, Loader=Loader)
-
-                shop, _ = Shop.objects.get_or_create(name=data['shop'], user_id=request.user.id)
-                for category in data['categories']:
-                    category_object, _ = Category.objects.get_or_create(id=category['id'], name=category['name'])
-                    category_object.shops.add(shop.id)
-                    category_object.save()
-                ProductInfo.objects.filter(shop_id=shop.id).delete()
-                for item in data['goods']:
-                    product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
-
-                    product_info = ProductInfo.objects.create(product_id=product.id,
-                                                              external_id=item['id'],
-                                                              model=item['model'],
-                                                              price=item['price'],
-                                                              price_rrc=item['price_rrc'],
-                                                              quantity=item['quantity'],
-                                                              shop_id=shop.id)
-                    for name, value in item['parameters'].items():
-                        parameter_object, _ = Parameter.objects.get_or_create(name=name)
-                        ProductParameter.objects.create(product_info_id=product_info.id,
-                                                        parameter_id=parameter_object.id,
-                                                        value=value)
-
-                return JsonResponse({'Status': True})
-
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
     
 
 class PartnerState(APIView):
@@ -890,7 +897,7 @@ class ContactView(APIView):
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
         if 'id' in request.data:
-            if str(request.data['id']).isdigit():
+            if (request.data['id']).isdigit():
                 contact = Contact.objects.filter(id=request.data['id'], user_id=request.user.id).first()
                 print(contact)
                 if contact:
@@ -946,4 +953,4 @@ class OrderView(APIView):
                         new_order.send(sender=self.__class__, user_id=request.user.id)
                         return JsonResponse({'Status': True})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)

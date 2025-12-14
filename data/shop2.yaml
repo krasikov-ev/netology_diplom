@@ -1,0 +1,225 @@
+shop: ТехноМаркет
+categories:
+  - id: 100
+    name: Ноутбуки
+  - id: 101
+    name: Мониторы
+  - id: 102
+    name: Клавиатуры
+  - id: 103
+    name: Мыши
+  - id: 104
+    name: Наушники
+
+goods:
+  - id: 5001
+    category: 100
+    model: apple/macbook-pro-16
+    name: Ноутбук Apple MacBook Pro 16" M3 Pro 512GB (Space Black)
+    price: 250000
+    price_rrc: 269990
+    quantity: 8
+    parameters:
+      "Диагональ экрана (дюйм)": 16.2
+      "Процессор": "Apple M3 Pro"
+      "Оперативная память (ГБ)": 18
+      "Накопитель (ГБ)": 512
+      "Цвет": "Space Black"
+      
+  - id: 5002
+    category: 100
+    model: lenovo/legion-5-pro
+    name: Ноутбук игровой Lenovo Legion 5 Pro 16" (Storm Grey)
+    price: 150000
+    price_rrc: 164990
+    quantity: 12
+    parameters:
+      "Диагональ экрана (дюйм)": 16
+      "Процессор": "AMD Ryzen 7 7745HX"
+      "Видеокарта": "NVIDIA GeForce RTX 4070"
+      "Оперативная память (ГБ)": 32
+      "Накопитель (ГБ)": 1000
+      "Цвет": "Storm Grey"
+      
+  - id: 5003
+    category: 101
+    model: samsung/odyssey-g9
+    name: Монитор игровой Samsung Odyssey G9 49" (LC49G97TSSP)
+    price: 120000
+    price_rrc: 129990
+    quantity: 5
+    parameters:
+      "Диагональ (дюйм)": 49
+      "Разрешение": "5120x1440"
+      "Частота обновления (Гц)": 240
+      "Кривизна": 1000R
+      "Технология матрицы": "QLED"
+      
+  - id: 5004
+    category: 101
+    model: dell/ultrasharp-u2723qe
+    name: Монитор Dell UltraSharp U2723QE 27" 4K IPS
+    price: 75000
+    price_rrc: 81990
+    quantity: 15
+    parameters:
+      "Диагональ (дюйм)": 27
+      "Разрешение": "3840x2160"
+      "Технология матрицы": "IPS Black"
+      "Цветовой охват": "100% sRGB, 98% DCI-P3"
+      "Порты": "USB-C, HDMI, DisplayPort"
+      
+  - id: 5005
+    category: 102
+    model: logitech/mx-keys-s
+    name: Клавиатура беспроводная Logitech MX Keys S (Graphite)
+    price: 12000
+    price_rrc: 14990
+    quantity: 25
+    parameters:
+      "Тип": "Мембранная"
+      "Подключение": "Bluetooth, USB Receiver"
+      "Подсветка": "Белая, с датчиком освещенности"
+      "Автономность": "до 10 месяцев"
+      "Материал корпуса": "Алюминий"
+      
+  - id: 5006
+    category: 102
+    model: keychron/k8-pro
+    name: Клавиатура механическая Keychron K8 Pro (Brown Switch)
+    price: 9000
+    price_rrc: 10990
+    quantity: 18
+    parameters:
+      "Тип": "Механическая"
+      "Свитчи": "Gateron Brown"
+      "Подключение": "Bluetooth, USB-C"
+      "Раскладка": "TKL (87 клавиш)"
+      "Подсветка": "RGB"
+      
+  - id: 5007
+    category: 103
+    model: razer/deathadder-v3-pro
+    name: Мышь игровая Razer DeathAdder V3 Pro (White)
+    price: 15000
+    price_rrc: 17990
+    quantity: 20
+    parameters:
+      "Сенсор": "Focus Pro 30K"
+      "Частота опроса (Гц)": 4000
+      "Вес (г)": 63
+      "Кнопки": 5
+      "Подключение": "Wireless, USB-C"
+      
+  - id: 5008
+    category: 103
+    model: logitech/mx-master-3s
+    name: Мышь беспроводная Logitech MX Master 3S (Graphite)
+    price: 13000
+    price_rrc: 14990
+    quantity: 22
+    parameters:
+      "Сенсор": "Darkfield 8000 DPI"
+      "Кнопки": 7
+      "Автономность": "до 70 дней"
+      "Подключение": "Bluetooth, USB Receiver"
+      "Быстрая зарядка": "3 минуты = 8 часов"
+      
+  - id: 5009
+    category: 104
+    model: sony/wh-1000xm5
+    name: Наушники беспроводные Sony WH-1000XM5 (Black)
+    price: 35000
+    price_rrc: 39990
+    quantity: 10
+    parameters:
+      "Тип": "Накладные"
+      "Шумоподавление": "Активное, Adaptive NC"
+      "Автономность": "до 30 часов"
+      "Вес (г)": 250
+      "Кодек": "LDAC, AAC, SBC"
+      
+  - id: 5010
+    category: 104
+    model: apple/airpods-pro-2
+    name: Наушники Apple AirPods Pro (2nd generation)
+    price: 28000
+    price_rrc: 32990
+    quantity: 30
+    parameters:
+      "Тип": "Внутриканальные"
+      "Шумоподавление": "Активное"
+      "Автономность": "до 6 часов (30 с кейсом)"
+      "Влагозащита": "IPX4"
+      "Чип": "H2"
+      
+  - id: 5011
+    category: 100
+    model: asus/rog-zephyrus-g14
+    name: Ноутбук игровой ASUS ROG Zephyrus G14 14" (Moonlight White)
+    price: 180000
+    price_rrc: 199990
+    quantity: 7
+    parameters:
+      "Диагональ экрана (дюйм)": 14
+      "Процессор": "AMD Ryzen 9 7940HS"
+      "Видеокарта": "NVIDIA GeForce RTX 4060"
+      "Оперативная память (ГБ)": 32
+      "Накопитель (ГБ)": 1000
+      "Матрица": "OLED 120Hz"
+      
+  - id: 5012
+    category: 101
+    model: lg/ultragear-27gp850
+    name: Монитор игровой LG UltraGear 27GP850-B 27" Nano IPS
+    price: 55000
+    price_rrc: 64990
+    quantity: 14
+    parameters:
+      "Диагональ (дюйм)": 27
+      "Разрешение": "2560x1440"
+      "Частота обновления (Гц)": 180
+      "Время отклика (мс)": 1
+      "Технология": "Nano IPS"
+      
+  - id: 5013
+    category: 102
+    model: razer/blackwidow-v4-pro
+    name: Клавиатура игровая Razer BlackWidow V4 Pro (Green Switch)
+    price: 25000
+    price_rrc: 29990
+    quantity: 9
+    parameters:
+      "Тип": "Механическая"
+      "Свитчи": "Razer Green"
+      "Подключение": "USB-C, Bluetooth"
+      "Клавиши": 8 программируемых макроклавиш
+      "Подсветка": "Razer Chroma RGB"
+      
+  - id: 5014
+    category: 103
+    model: steelseries/aerox-5
+    name: Мышь игровая SteelSeries Aerox 5 (Ghost)
+    price: 11000
+    price_rrc: 13990
+    quantity: 16
+    parameters:
+      "Сенсор": "TrueMove Air"
+      "Вес (г)": 66
+      "Кнопки": 9 программируемых
+      "Подключение": "Wireless, USB-C"
+      "Материал корпуса": "Поликарбонат"
+      
+  - id: 5015
+    category: 104
+    model: beyerdynamic/dt-770-pro
+    name: Наушники Beyerdynamic DT 770 PRO 80 Ohm
+    price: 18000
+    price_rrc: 21990
+    quantity: 12
+    parameters:
+      "Тип": "Накладные, закрытые"
+      "Импеданс (Ом)": 80
+      "Диапазон частот (Гц)": 5-35000
+      "Чувствительность (дБ)": 96
+      "Вес (г)": 270

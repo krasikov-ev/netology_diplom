@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.db import transaction
 # from distutils.util import strtobool
+
 from setuptools._distutils.util import strtobool
 from rest_framework.request import Request
 from django.contrib.auth import authenticate
@@ -15,12 +16,14 @@ from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.pagination import PageNumberPagination
-from .models import User
+from .models import User, USER_TYPE_CHOICES
 
 
 from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
@@ -129,6 +132,16 @@ class RegisterAccount(APIView):
         # Проверяем обязательные аргументы
         if {'first_name', 'last_name', 'email', 'password', 'company', 'position'}.issubset(request.data):
 
+
+            # Проверяем тип пользователя 
+            user_type = request.data.get('type', 'buyer') 
+            valid_types = dict(USER_TYPE_CHOICES).keys()
+            
+            if user_type not in valid_types:
+                return JsonResponse({
+                    'Status': False, 
+                    'Errors': f'Недопустимый тип пользователя. Допустимо: {", ".join(valid_types)}'
+                }, status=400)
             # Проверяем пароль на сложность
             try:
                 validate_password(request.data['password'])
@@ -136,7 +149,7 @@ class RegisterAccount(APIView):
                 error_array = []
                 for item in password_error:
                     error_array.append(item)
-                return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
+                return JsonResponse({'Status': False, 'Errors': {'password': error_array}}, status = 400)
             else:
                 # Проверяем, существует ли пользователь
                 if User.objects.filter(email=request.data['email']).exists():
@@ -145,18 +158,21 @@ class RegisterAccount(APIView):
                         'Errors': 'Пользователь с таким email уже существует'
                     },
                     status=400)
-
+               
                 user_serializer = UserSerializer(data=request.data)
                 if user_serializer.is_valid():
                     # Сохраняем пользователя
                     user = user_serializer.save()
                     user.set_password(request.data['password'])
                     user.is_active = False  
+                    user.type = user_type
                     user.save()
 
                     # Создаем токен подтверждения
                     token = ConfirmEmailToken.objects.create(user=user)
-                    
+                    # #  Создаем авторизационный токен
+                    # from rest_framework.authtoken.models import Token
+                    # api_token, created = Token.objects.get_or_create(user=user)                  
                     # Отправляем email 
                     self._send_confirmation_email(user.email, token.key)
                     
@@ -171,7 +187,7 @@ class RegisterAccount(APIView):
         Заглушка для отправки email 
         """
         print(f"Confirmation email to: {email}")
-        print(f"Token: {token}")
+        # print(f"Token: {token}")
         # TODO: Реальная отправка email
         # send_mail(...)
 
@@ -203,6 +219,11 @@ class ConfirmAccount(APIView):
                 
                 token.user.is_active = True
                 token.user.save()
+
+                 # СОЗДАЕМ АВТОРИЗАЦИОННЫЙ ТОКЕН API
+                from rest_framework.authtoken.models import Token
+                api_token, created = Token.objects.get_or_create(user=token.user)
+
                 token.delete()
                 return JsonResponse({'Status': True})
             else:

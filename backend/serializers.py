@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from backend.models import User, Category, Shop, ProductInfo, Product, ProductParameter, OrderItem, Order, Contact
+from backend.models import User, Category, Shop, ProductInfo, Product, ProductParameter, OrderItem, Order, Contact, USER_TYPE_CHOICES
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -13,11 +13,16 @@ class ContactSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     contacts = ContactSerializer(read_only=True, many=True)
+    type = serializers.ChoiceField(
+        choices=USER_TYPE_CHOICES,
+        default='buyer',  
+        required=False    
+    )
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'company', 'position', 'contacts')
-        read_only_fields = ('id',)
+        fields = ('id', 'first_name', 'last_name', 'email', 'company', 'position', 'contacts', 'type')
+        read_only_fields = ('id', 'contacts', 'is_active')
     
     def validate_email(self, value):
         """
@@ -27,20 +32,27 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Пользователь с таким email уже существует")
         return value
 
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'email', 'company', 'position']
-    
-    def validate_email(self, value):
-        """
-        Проверка уникальности email в сериализаторе
-        """
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Пользователь с таким email уже существует")
+    def validate_type(self, value):
+        """Проверка типа"""
+        valid_types = dict(USER_TYPE_CHOICES).keys()
+        if value not in valid_types:
+            raise serializers.ValidationError(
+                f"Тип пользователя должен быть: {', '.join(valid_types)}"
+            )
         return value
+
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['first_name', 'last_name', 'email', 'company', 'position']
+    
+#     def validate_email(self, value):
+#         """
+#         Проверка уникальности email в сериализаторе
+#         """
+#         if User.objects.filter(email=value).exists():
+#             raise serializers.ValidationError("Пользователь с таким email уже существует")
+#         return value
     
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:

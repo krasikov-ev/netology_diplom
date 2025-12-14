@@ -845,9 +845,12 @@ class ContactView(APIView):
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
         if {'city', 'street', 'phone'}.issubset(request.data):
-            request.data._mutable = True
-            request.data.update({'user': request.user.id})
-            serializer = ContactSerializer(data=request.data)
+            # request.data._mutable = True
+            # request.data.update({'user': request.user.id})
+            # serializer = ContactSerializer(data=request.data)
+            contact_data = request.data.copy()
+            contact_data['user'] = request.user.id
+            serializer = ContactSerializer(data=contact_data)
 
             if serializer.is_valid():
                 serializer.save()
@@ -887,7 +890,7 @@ class ContactView(APIView):
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
         if 'id' in request.data:
-            if request.data['id'].isdigit():
+            if str(request.data['id']).isdigit():
                 contact = Contact.objects.filter(id=request.data['id'], user_id=request.user.id).first()
                 print(contact)
                 if contact:

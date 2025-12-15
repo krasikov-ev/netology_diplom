@@ -523,7 +523,8 @@ class BasketView(APIView):
                     'Data': []
                 })
 
-            serializer = OrderSerializer(basket, many=True)
+            # serializer = OrderSerializer(basket, many=True)
+            serializer = OrderSerializer(basket)
             return Response(serializer.data)
 
         except Exception as e:
@@ -756,9 +757,6 @@ class BasketView(APIView):
             )
 
 
-
-    
-
 class PartnerState(APIView):
     """
     Класс для управления статусом приема заказов магазином
@@ -931,6 +929,30 @@ class OrderView(APIView):
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
 
+    # def post(self, request, *args, **kwargs):
+    #     """
+    #     Оформить заказ из корзины
+    #     """
+    #     if not request.user.is_authenticated:
+    #         return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+    #     if {'id', 'contact'}.issubset(request.data):
+    #         if request.data['id'].isdigit():
+    #             try:
+    #                 is_updated = Order.objects.filter(
+    #                     user_id=request.user.id, id=request.data['id']).update(
+    #                     contact_id=request.data['contact'],
+    #                     state='new')
+    #             except IntegrityError as error:
+    #                 print(error)
+    #                 return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
+    #             else:
+    #                 if is_updated:
+    #                     new_order.send(sender=self.__class__, user_id=request.user.id)
+    #                     return JsonResponse({'Status': True})
+
+    #     return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
+    
     def post(self, request, *args, **kwargs):
         """
         Оформить заказ из корзины
@@ -939,18 +961,42 @@ class OrderView(APIView):
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
         if {'id', 'contact'}.issubset(request.data):
-            if request.data['id'].isdigit():
-                try:
-                    is_updated = Order.objects.filter(
-                        user_id=request.user.id, id=request.data['id']).update(
-                        contact_id=request.data['contact'],
-                        state='new')
-                except IntegrityError as error:
-                    print(error)
-                    return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
+            try:
+                # Пробуем преобразовать id в число (обрабатываем и строку, и int)
+                order_id = int(request.data['id'])
+                contact_id = int(request.data['contact'])
+                
+                is_updated = Order.objects.filter(
+                    user_id=request.user.id, 
+                    id=order_id,
+                    state='basket'  # Добавляем фильтр по статусу 'basket'
+                ).update(
+                    contact_id=contact_id,
+                    state='new'
+                )
+                
+                if is_updated:
+                    # Отправляем сигнал о новом заказе
+                    new_order.send(sender=self.__class__, user_id=request.user.id)
+                    return JsonResponse({'Status': True})
                 else:
-                    if is_updated:
-                        new_order.send(sender=self.__class__, user_id=request.user.id)
-                        return JsonResponse({'Status': True})
+                    return JsonResponse({
+                        'Status': False, 
+                        'Errors': 'Корзина не найдена или уже оформлена'
+                    }, status=400)
+                    
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'Status': False, 
+                    'Errors': 'Некорректный формат ID'
+                }, status=400)
+            except IntegrityError as error:
+                return JsonResponse({
+                    'Status': False, 
+                    'Errors': f'Ошибка базы данных: {str(error)}'
+                })
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
+        return JsonResponse({
+            'Status': False, 
+            'Errors': 'Не указаны все необходимые аргументы'
+        }, status=400)

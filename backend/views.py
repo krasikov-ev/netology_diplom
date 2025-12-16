@@ -1,7 +1,10 @@
 from django.shortcuts import render
 from django.db import transaction
 # from distutils.util import strtobool
-
+import yaml
+from django.http import HttpResponse
+from django.utils import timezone
+from decimal import Decimal
 from setuptools._distutils.util import strtobool
 from rest_framework.request import Request
 from django.contrib.auth import authenticate
@@ -32,62 +35,6 @@ from backend.serializers import UserSerializer, CategorySerializer, ShopSerializ
     OrderItemSerializer, OrderSerializer, ContactSerializer
 from backend.signals import new_user_registered, new_order
 
-# class PartnerUpdate(APIView):
-#     """
-#     Класс для обновления информации  поставщика
-#     """
-
-#     def post(self, request, *args, **kwargs):
-#         """
-#         Импорт прайс-листа поставщика из YAML файла по URL
-#         """
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-#         if request.user.type != 'shop':
-#             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
-
-#         url = request.data.get('url')
-#         if url:
-#             validate_url = URLValidator()
-#             try:
-#                 validate_url(url)
-#             except ValidationError as e:
-#                 return JsonResponse({'Status': False, 'Error': str(e)})
-#             else:
-#                 stream = get(url).content
-
-#                 data = load_yaml(stream, Loader=Loader)
-
-#                 shop, _ = Shop.objects.get_or_create(name=data['shop'], user_id=request.user.id)
-#                 for category in data['categories']:
-#                     category_object, _ = Category.objects.get_or_create(id=category['id'], name=category['name'])
-#                     category_object.shops.add(shop.id)
-#                     category_object.save()
-#                 ProductInfo.objects.filter(shop_id=shop.id).delete()
-#                 for item in data['goods']:
-#                     product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
-
-#                     product_info = ProductInfo.objects.create(product_id=product.id,
-#                                                               external_id=item['id'],
-#                                                               model=item['model'],
-#                                                               price=item['price'],
-#                                                               price_rrc=item['price_rrc'],
-#                                                               quantity=item['quantity'],
-#                                                               shop_id=shop.id)
-#                     for name, value in item['parameters'].items():
-#                         parameter_object, _ = Parameter.objects.get_or_create(name=name)
-#                         ProductParameter.objects.create(product_info_id=product_info.id,
-#                                                         parameter_id=parameter_object.id,
-#                                                         value=value)
-
-#                 return JsonResponse({'Status': True})
-
-#         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
-
-
-
-# Create your views here.
 class PartnerUpdate(APIView):
     """
     Класс для обновления информации  поставщика
@@ -161,7 +108,88 @@ class PartnerUpdate(APIView):
                 return JsonResponse({'Status': True})
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
-    
+
+class PartnerExport(APIView):
+    """
+    Класс для экспорта прайс-листа магазина
+    """
+    def get(self, request, *args, **kwargs):
+        pass
+        # Аутентинтификация
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        if request.user.type != 'shop':
+            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+
+        try:
+            # Проверка если еще не создан магазин (не было импорта)
+            shop = Shop.objects.filter(user_id=request.user.id).first()
+            if not shop:
+                return JsonResponse({'Status': False, 'Error': 'Магазин не найден'}, status=404)
+            
+            # Собираем данные в структуру для YAML
+            export_data = {
+                'shop': shop.name,
+                'categories': [],
+                'goods': []
+            }
+            
+            # Собираем категории
+            categories = Category.objects.filter(shops=shop).distinct()
+            for category in categories:
+                export_data['categories'].append({
+                    'id': category.id,
+                    'name': category.name
+                })
+            
+            # Собираем товары
+            products = ProductInfo.objects.filter(
+                shop=shop
+            ).select_related('product', 'product__category').prefetch_related('product_parameters__parameter')
+            
+            for product in products:
+                product_data = {
+                    'id': product.external_id,                    
+                    'category': product.product.category_id,
+                    'model': product.model,
+                    'name': product.product.name,
+                    'price': float(product.price) if product.price is not None else None,
+                    'price_rrc': float(product.price_rrc) if product.price is not None else None,
+                    'quantity': product.quantity,
+                    'parameters': {}
+                }
+                
+                # Добавляем параметры товара
+                for param in product.product_parameters.all():
+                    product_data['parameters'][param.parameter.name] = param.value
+                
+                export_data['goods'].append(product_data)
+            
+            # Формируем YAML
+            yaml_data = yaml.dump(
+                export_data,
+                allow_unicode=True,  # Поддержка кириллицы
+                default_flow_style=False,  # Читаемый формат
+                sort_keys=False  # Сохраняем порядок ключей
+            )
+
+            # вставляем пустую строку
+            if '\ngoods:' in yaml_data:
+                goods_index = yaml_data.find('\ngoods:')
+                yaml_data = yaml_data[:goods_index] + '\n' + yaml_data[goods_index:]
+
+            # Создаем HTTP-ответ с YAML файлом
+            response = HttpResponse(yaml_data, content_type='application/x-yaml')
+            response['Content-Disposition'] = f'attachment; filename="{shop.name}_export_{timezone.now().date()}.yaml"'
+            return response
+            
+        except Exception as e:
+            return JsonResponse({
+                'Status': False, 
+                'Error': f'Ошибка при экспорте: {str(e)}'
+            }, status=500)
+
 
 class RegisterAccount(APIView):
     """
@@ -793,9 +821,9 @@ class PartnerState(APIView):
                 Shop.objects.filter(user_id=request.user.id).update(state=strtobool(state))
                 return JsonResponse({'Status': True})
             except ValueError as error:
-                return JsonResponse({'Status': False, 'Errors': str(error)})
+                return JsonResponse({'Status': False, 'Errors': str(error)}, status = 400)
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
     
 
 class PartnerOrders(APIView):

@@ -243,13 +243,9 @@ class RegisterAccount(APIView):
                     user.save()
 
                     # Создаем токен подтверждения
-                    token = ConfirmEmailToken.objects.create(user=user)
-                    # #  Создаем авторизационный токен
-                    # from rest_framework.authtoken.models import Token
-                    # api_token, created = Token.objects.get_or_create(user=user)                  
-                    # Отправляем email 
-                    # self._send_confirmation_email(user.email, token.key)
-                    self._send_confirmation_email(user, token.key)
+                    # token = ConfirmEmailToken.objects.create(user=user)
+                
+                    # self._send_confirmation_email(user, token.key)
                     
                     return JsonResponse({'Status': True})
                 else:
@@ -257,45 +253,37 @@ class RegisterAccount(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
 
+ 
     # def _send_confirmation_email(self, user, token):
     #     """
-    #     Заглушка для отправки email 
+    #     Отправка email
     #     """
-    #     print(f"Confirmation email to: {user.email}")
-    #     # print(f"Token: {token}")
-    #     # TODO: Реальная отправка email
-    #     # send_mail(...)
-    def _send_confirmation_email(self, user, token):
-        """
-        Отправка email
-        """
-        subject = 'Подтверждение регистрации'
+    #     subject = 'Подтверждение регистрации в интернет магазине'
         
-        # Формируем простое текстовое сообщение
-        message = f"""
-        Здравствуйте, {user.first_name} {user.last_name}!
+    #     message = f"""
+    #     Здравствуйте, {user.first_name} {user.last_name}!
         
-        Для подтверждения регистрации используйте следующий токен:
+    #     Для подтверждения регистрации используйте следующий токен:
         
-        {token}
+    #     {token}
         
-        Отправьте POST запрос на /api/v1/user/register/confirm с параметрами:
-        - email: {user.email}
-        - token: {token}
+    #     Отправьте POST запрос на /api/v1/user/register/confirm с параметрами:
+    #     - email: {user.email}
+    #     - token: {token}
        
-        """
+    #     """
         
-        try:
-            send_mail(
-                subject=subject,
-                message=message.strip(),  # .strip() убирает лишние переносы в начале/конце
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                # html_message=None  # Не передаём HTML-версию
-            )
-            print(f"email отправлен на: {user.email}")
-        except Exception as e:
-            print(f"Failed to send email to {user.email}: {str(e)}")
+    #     try:
+    #         send_mail(
+    #             subject=subject,
+    #             message=message.strip(),  
+    #             from_email=settings.DEFAULT_FROM_EMAIL,
+    #             recipient_list=[user.email],
+    #         )
+    #         # print(f"email отправлен на: {user.email}")
+    #     except Exception as e:
+    #         print(f"Failed to send email to {user.email}: {str(e)}")
+
 
 class ConfirmAccount(APIView):
     """
@@ -326,11 +314,14 @@ class ConfirmAccount(APIView):
                 token.user.save()
 
                  # СОЗДАЕМ АВТОРИЗАЦИОННЫЙ ТОКЕН API
-                from rest_framework.authtoken.models import Token
-                api_token, created = Token.objects.get_or_create(user=token.user)
+                # from rest_framework.authtoken.models import Token
+                # api_token, created = Token.objects.get_or_create(user=token.user)
 
                 token.delete()
-                return JsonResponse({'Status': True})
+                return JsonResponse({
+                    'Status': True,
+                    # 'Token': api_token.key 
+                    })
             else:
                 return JsonResponse({
                     'Status': False,'Errors': 'Неправильно указан токен или email'

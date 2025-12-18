@@ -4,7 +4,6 @@ from django.db import transaction
 import yaml
 from django.http import HttpResponse
 from django.utils import timezone
-from decimal import Decimal
 from setuptools._distutils.util import strtobool
 from rest_framework.request import Request
 from django.contrib.auth import authenticate
@@ -27,6 +26,9 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework.pagination import PageNumberPagination
 from .models import User, USER_TYPE_CHOICES
+# from orders.settings import DEFAULT_FROM_EMAIL
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
@@ -109,6 +111,7 @@ class PartnerUpdate(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
+
 class PartnerExport(APIView):
     """
     Класс для экспорта прайс-листа магазина
@@ -169,9 +172,9 @@ class PartnerExport(APIView):
             # Формируем YAML
             yaml_data = yaml.dump(
                 export_data,
-                allow_unicode=True,  # Поддержка кириллицы
-                default_flow_style=False,  # Читаемый формат
-                sort_keys=False  # Сохраняем порядок ключей
+                allow_unicode=True,  
+                default_flow_style=False,  
+                sort_keys=False  
             )
 
             # вставляем пустую строку
@@ -198,7 +201,7 @@ class RegisterAccount(APIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Process a POST request and create a new user.
+        Создание пользователя методом POST
         """
         # Проверяем обязательные аргументы
         if {'first_name', 'last_name', 'email', 'password', 'company', 'position'}.issubset(request.data):
@@ -245,7 +248,8 @@ class RegisterAccount(APIView):
                     # from rest_framework.authtoken.models import Token
                     # api_token, created = Token.objects.get_or_create(user=user)                  
                     # Отправляем email 
-                    self._send_confirmation_email(user.email, token.key)
+                    # self._send_confirmation_email(user.email, token.key)
+                    self._send_confirmation_email(user, token.key)
                     
                     return JsonResponse({'Status': True})
                 else:
@@ -253,15 +257,45 @@ class RegisterAccount(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
 
-    def _send_confirmation_email(self, email, token):
+    # def _send_confirmation_email(self, user, token):
+    #     """
+    #     Заглушка для отправки email 
+    #     """
+    #     print(f"Confirmation email to: {user.email}")
+    #     # print(f"Token: {token}")
+    #     # TODO: Реальная отправка email
+    #     # send_mail(...)
+    def _send_confirmation_email(self, user, token):
         """
-        Заглушка для отправки email 
+        Отправка email
         """
-        print(f"Confirmation email to: {email}")
-        # print(f"Token: {token}")
-        # TODO: Реальная отправка email
-        # send_mail(...)
-
+        subject = 'Подтверждение регистрации'
+        
+        # Формируем простое текстовое сообщение
+        message = f"""
+        Здравствуйте, {user.first_name} {user.last_name}!
+        
+        Для подтверждения регистрации используйте следующий токен:
+        
+        {token}
+        
+        Отправьте POST запрос на /api/v1/user/register/confirm с параметрами:
+        - email: {user.email}
+        - token: {token}
+       
+        """
+        
+        try:
+            send_mail(
+                subject=subject,
+                message=message.strip(),  # .strip() убирает лишние переносы в начале/конце
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                # html_message=None  # Не передаём HTML-версию
+            )
+            print(f"email отправлен на: {user.email}")
+        except Exception as e:
+            print(f"Failed to send email to {user.email}: {str(e)}")
 
 class ConfirmAccount(APIView):
     """
@@ -380,8 +414,6 @@ class AccountDetails(APIView):
             )
         
 
-
-
 class LoginAccount(APIView):
     """
     Класс для авторизации пользователей
@@ -484,7 +516,7 @@ class ProductInfoView(APIView):
     """
     def get(self, request: Request, *args, **kwargs):
         """
-        Поиск товаров с фильтрацией по магазину, категории и другим параметрам
+        Поиск товаров с фильтрацией по  параметрам
         """
         query = Q(shop__state=True)
         shop_id = request.query_params.get('shop_id')

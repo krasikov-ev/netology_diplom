@@ -1,0 +1,62 @@
+shop: Линейка
+categories:
+  - id: 200
+    name: Ручки
+  - id: 201
+    name: Блокноты
+  - id: 202
+    name: Скобы для степлера
+
+goods:
+  - id: 7001
+    category: 200
+    model: pilot/g2-07
+    name: Ручка гелевая Pilot G2 0.7 мм (синяя)
+    price: 120
+    price_rrc: 149
+    quantity: 150
+    parameters:
+      "Тип чернил": "Гелевые"
+      "Толщина стержня (мм)": 0.7
+      "Цвет чернил": "Синий"
+      "Корпус": "Пластиковый"
+      
+  - id: 7002
+    category: 201
+    model: moleskine/classic-large
+    name: Блокнот Moleskine Classic Large в твердой обложке
+    price: 950
+    price_rrc: 1290
+    quantity: 45
+    parameters:
+      "Формат": "A5"
+      "Количество страниц": 192
+      "Линовка": "Клетка"
+      "Обложка": "Твердая"
+      "Цвет": "Черный"
+      
+  - id: 7003
+    category: 202
+    model: brauberg/staples-24-6
+    name: Скобы для степлера Brauberg №24 (1000 шт, 6 мм)
+    price: 65
+    price_rrc: 89
+    quantity: 300
+    parameters:
+      "Тип": "Стандартные"
+      "Количество": 1000
+      "Длина ножки (мм)": 6
+      "Материал": "Сталь"
+      
+  - id: 7004
+    category: 200
+    model: parker/jotter-gt
+    name: Ручка шариковая Parker Jotter GT (стальной корпус)
+    price: 2200
+    price_rrc: 2990
+    quantity: 28
+    parameters:
+      "Тип чернил": "Шариковые"
+      "Толщина стержня (мм)": 0.7
+      "Материал корпуса": "Нержавеющая сталь"
+      "Механизм": "Кнопочный"

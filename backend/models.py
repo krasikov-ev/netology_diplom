@@ -242,6 +242,7 @@ class Order(models.Model):
     def __str__(self):
         return str(self.dt)
 
+
 class OrderItem(models.Model):
     # objects = models.manager.Manager()
     order = models.ForeignKey(Order, verbose_name='Заказ', related_name='ordered_items', #blank=True,
@@ -264,6 +265,7 @@ class OrderItem(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['order_id', 'product_info'], name='unique_order_item'),
         ]
+
 
 class ConfirmEmailToken(models.Model):
     # objects = models.manager.Manager()

@@ -118,3 +118,64 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'ordered_items', 'state', 'dt', 'total_sum', 'contact',)
         read_only_fields = ('id',)
+
+
+class PartnerOrderItemUpdateSerializer(serializers.Serializer):
+
+    order_id = serializers.IntegerField(min_value=1)
+    updates = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1  
+    )
+    
+    def validate_updates(self, value):
+        """Дополнительная валидация списка updates"""
+        for i, update in enumerate(value):
+            # Проверяем обязательные поля
+            if 'item_id' not in update or 'quantity' not in update:
+                raise serializers.ValidationError(
+                    f"Элемент #{i}: отсутствуют item_id или quantity"
+                )
+            
+            # Проверяем типы
+            try:
+                item_id = int(update['item_id'])
+                if item_id <= 0:
+                    raise serializers.ValidationError(
+                        f"Элемент #{i}: item_id должен быть положительным числом"
+                    )
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    f"Элемент #{i}: некорректный item_id"
+                )
+            
+            try:
+                quantity = int(update['quantity'])
+                if quantity < 0:
+                    raise serializers.ValidationError(
+                        f"Элемент #{i}: количество не может быть отрицательным"
+                    )
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    f"Элемент #{i}: некорректное количество"
+                )
+        
+        return value
+    
+class PartnerOrderStatusSerializer(serializers.Serializer):
+    """Валидация запроса на изменение статуса заказа"""
+    
+    order_id = serializers.IntegerField(min_value=1)
+    status = serializers.CharField(max_length=20)
+    
+    def validate_status(self, value):
+        """Проверка допустимости статуса"""
+        valid_statuses = [code for code, _ in Order.STATE_CHOICES if code != 'basket']
+        
+        if value not in valid_statuses:
+            status_list = ", ".join([f"'{s}'" for s in valid_statuses])
+            raise serializers.ValidationError(
+                f'Недопустимый статус. Допустимо: {status_list}'
+            )
+        
+        return value

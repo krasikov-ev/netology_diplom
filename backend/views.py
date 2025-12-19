@@ -1,41 +1,92 @@
-from django.shortcuts import render
-from django.db import transaction
-# from distutils.util import strtobool
+# from django.shortcuts import render
+# from django.db import transaction
+# # from distutils.util import strtobool
+# import yaml
+# from django.http import HttpResponse
+# from django.utils import timezone
+# from setuptools._distutils.util import strtobool
+# from rest_framework.request import Request
+# from django.contrib.auth import authenticate
+# from django.contrib.auth.password_validation import validate_password
+# from django.core.exceptions import ValidationError
+# from django.core.validators import URLValidator
+# from django.db import IntegrityError
+# from django.db.models import Q, Sum, F
+# from django.http import JsonResponse
+# from requests import get
+# from rest_framework.authtoken.models import Token
+# from rest_framework.generics import ListAPIView
+# from rest_framework.response import Response
+# from rest_framework.views import APIView
+# from django.dispatch import receiver
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+# from ujson import loads as load_json
+# from yaml import load as load_yaml, Loader
+# from django.utils import timezone
+# from datetime import timedelta
+# from rest_framework.pagination import PageNumberPagination
+# from .models import User, USER_TYPE_CHOICES
+# # from orders.settings import DEFAULT_FROM_EMAIL
+# from django.core.mail import send_mail
+# from django.conf import settings
+
+
+# from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
+#     Contact, ConfirmEmailToken
+# from backend.serializers import UserSerializer, CategorySerializer, ShopSerializer, ProductInfoSerializer, \
+#     OrderItemSerializer, OrderSerializer, ContactSerializer, PartnerOrderItemUpdateSerializer, PartnerOrderStatusSerializer
+# from backend.signals import  new_order, order_status_changed, order_item_quantity_changed
+
+
+
 import yaml
-from django.http import HttpResponse
-from django.utils import timezone
-from setuptools._distutils.util import strtobool
-from rest_framework.request import Request
+from datetime import timedelta
+
+
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-from django.db import IntegrityError
+from django.core.mail import send_mail
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum, F
-from django.http import JsonResponse
-from requests import get
+from django.dispatch import receiver
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.pagination import PageNumberPagination
+
+
+import requests
 from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
-from django.utils import timezone
-from datetime import timedelta
-from rest_framework.pagination import PageNumberPagination
-from .models import User, USER_TYPE_CHOICES
-# from orders.settings import DEFAULT_FROM_EMAIL
-from django.core.mail import send_mail
-from django.conf import settings
+from setuptools._distutils.util import strtobool
 
-
-from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
+# Локальные импорты
+from backend.models import (
+    User, USER_TYPE_CHOICES,
+    Shop, Category, Product, ProductInfo, 
+    Parameter, ProductParameter, Order, OrderItem,
     Contact, ConfirmEmailToken
-from backend.serializers import UserSerializer, CategorySerializer, ShopSerializer, ProductInfoSerializer, \
-    OrderItemSerializer, OrderSerializer, ContactSerializer
-from backend.signals import new_user_registered, new_order
+)
+from backend.serializers import (
+    UserSerializer, CategorySerializer, ShopSerializer, 
+    ProductInfoSerializer, OrderItemSerializer, OrderSerializer,
+    ContactSerializer, PartnerOrderItemUpdateSerializer,
+    PartnerOrderStatusSerializer
+)
+from backend.signals import new_order, order_status_changed, order_item_quantity_changed
+
 
 class PartnerUpdate(APIView):
     """
@@ -1028,7 +1079,7 @@ class OrderView(APIView):
                 
                 if is_updated:
                     # Отправляем сигнал о новом заказе
-                    new_order.send(sender=self.__class__, user_id=request.user.id)
+                    new_order.send(sender=self.__class__, user_id=request.user.id, order_id=request.order.id)
                     return JsonResponse({'Status': True})
                 else:
                     return JsonResponse({
@@ -1051,3 +1102,415 @@ class OrderView(APIView):
             'Status': False, 
             'Errors': 'Не указаны все необходимые аргументы'
         }, status=400)
+    
+
+# class PartnerOrderItemQuantity(APIView):
+#     """ Изменение количества товаров в заказе ( """
+
+#     def patch(self, request, order_id):
+#         """
+#         Обновление количества товаров в заказе
+        
+#         {
+#             "order_id": 123,
+#             "updates": [
+#                 {"item_id": 456, "quantity": 3}
+#             ]
+#         }
+#         """
+#         if not request.user.is_authenticated:
+#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+#         if request.user.type != 'shop':
+#             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+
+#         updates = request.data.get('updates')
+
+#         if not updates or not isinstance(updates, list):
+#             return JsonResponse({
+#                 'Status': False, 
+#                 'Error': 'Неверный формат: updates должен быть списком'
+#             }, status=400)
+
+#         if len(updates) == 0:
+#             return JsonResponse({
+#                 'Status': False, 
+#                 'Error': 'Список updates не должен быть пустым'
+#             }, status=400)
+        
+#         order = get_object_or_404(Order,
+#             id=order_id,
+#             ordered_items__product_info__shop__user_id=request.user.id
+#         )
+
+#         changes = []
+#         errors = []
+#         for i, update in enumerate(request.data['updates']):
+#             try:
+#                 # Проверка обязательных полей
+#                 if 'item_id' not in update or 'quantity' not in update:
+#                     errors.append(f"Элемент {i}: отсутствуют обязательные поля")
+#                     continue
+                
+#                 # Преобразование к int
+#                 try:
+#                     item_id = int(update['item_id'])
+#                 except (ValueError, TypeError):
+#                     errors.append(f"Элемент {i}: некорректный item_id")
+#                     continue
+                
+#                 try:
+#                     new_quantity = int(update['quantity'])
+#                 except (ValueError, TypeError):
+#                     errors.append(f"Элемент {i}: некорректное количество")
+#                     continue
+                
+#                 if new_quantity < 0:
+#                     errors.append(f"Элемент {i}: количество не может быть отрицательным")
+#                     continue    
+                
+#                 # Ищем товар в заказе
+#                 order_item = OrderItem.objects.filter(
+#                     id=item_id,
+#                     order=order,
+#                     product_info__shop__user_id=request.user.id
+#                 ).first()
+                
+#                 if not order_item:
+#                     continue
+                
+#                 old_quantity = order_item.quantity
+                
+#                 # Пропускаем если количество не изменилось
+#                 if new_quantity == old_quantity:
+#                     continue
+                
+#                 # Только в этих статусах можно менять товар
+#                 if order.state not in ['new', 'confirmed', 'assembled']:
+#                     continue
+    
+#                 # Формируем запись об изменении
+#                 change_record = {
+#                     'item_id': order_item.id,
+#                     'product_name': order_item.product_info.product.name,
+#                     'old_quantity': old_quantity,
+#                     'new_quantity': new_quantity,
+#                     'price': order_item.product_info.price,
+#                     'action': 'updated' if new_quantity > 0 else 'removed'
+#                 }
+                
+#                 changes.append(change_record)
+                
+#                 # Сохраняем изменения
+#                 if new_quantity == 0:
+#                     order_item.delete()
+#                 else:
+#                     order_item.quantity = new_quantity
+#                     order_item.save()
+                    
+#             except (ValueError, TypeError):
+#                 continue
+        
+#         # Если нет изменений 
+#         if not changes:
+#             return JsonResponse({
+#                 'Status': True, 
+#                 'Message': 'Нет изменений для обработки'
+#             })
+        
+#         # Отправляем сигнал со всеми изменениями
+#         order_item_quantity_changed.send(
+#             sender=self.__class__,
+#             order_id=order.id,
+#             user_id=order.user.id,
+#             changes=changes,
+#             changed_by=request.user.id
+#         )
+        
+#         return JsonResponse({
+#             'Status': True,
+#             'Message': f'Обновлено {len(changes)} товар(ов)',
+#             'Changes': changes
+#         })
+
+
+class PartnerOrderItemQuantity(APIView):
+    """Изменение количества товаров в заказе"""
+
+    def patch(self, request):
+        """
+        Обновление количества товаров в заказе
+        
+        {
+            "order_id": 123,
+            "updates": [
+                {"item_id": 456, "quantity": 3}
+            ]
+        }
+        """
+        serializer = PartnerOrderItemUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return JsonResponse({
+                'Status': False,
+                'Errors': serializer.errors
+            }, status=400)
+        
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        if request.user.type != 'shop':
+            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)   
+           
+        order_id = serializer.validated_data['order_id']
+        updates = serializer.validated_data['updates']
+        order = get_object_or_404(Order,
+            id=order_id,
+            ordered_items__product_info__shop__user_id=request.user.id
+        )
+        
+        changes = []  # Список для всех изменений
+        
+        for update in updates:
+            item_id = update['item_id']
+            new_quantity = update['quantity']
+            
+            # Поиск товара
+            order_item = get_object_or_404(
+                OrderItem,
+                id=item_id,
+                order=order,
+                product_info__shop__user_id=request.user.id
+)
+             
+            
+            # Проверка изменения
+            old_quantity = order_item.quantity
+            if new_quantity == old_quantity:
+                continue
+            
+            # Создание записи об изменении
+            change_record = {
+                'item_id': order_item.id,
+                'product_name': order_item.product_info.product.name,
+                'old_quantity': old_quantity,
+                'new_quantity': new_quantity,
+                'price': order_item.product_info.price,
+                'action': 'updated' if new_quantity > 0 else 'removed'
+            }
+            
+            # Добавление в список изменений
+            changes.append(change_record)
+            
+            # Применение изменения
+            if new_quantity == 0:
+                order_item.delete()
+            else:
+                order_item.quantity = new_quantity
+                order_item.save()
+        
+        # Отправка сигнала
+        if changes:
+            order_item_quantity_changed.send(
+                sender=self.__class__,
+                order_id=order.id,
+                user_id=order.user.id,
+                changes=changes,
+                changed_by=request.user.id
+            )
+        
+        return JsonResponse({
+            'Status': True,
+            'Message': f'Обновлено {len(changes)} товар(ов)',
+            'Changes': changes
+        })
+    
+
+# class PartnerOrderStatus(APIView):
+#     """ Изменение статуса заказа магазином """
+
+#     def patch(self, request):
+#         """
+#         Изменить статус заказа 
+#         {
+#             "order_id": 1,
+#             "status": "confirmed"
+#         }
+#         """
+        
+#         if not request.user.is_authenticated:
+#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+       
+#         if request.user.type != 'shop':
+#             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+
+        
+#         if 'status' not in request.data:
+#             return JsonResponse({'Status': False, 'Error': 'Не указан status'}, status=400)
+
+#         new_status = request.data['status']
+        
+#         # Исключаем 'basket' - магазин не может вернуть заказ в корзину
+#         valid_statuses_for_shop = [
+#             code for code, _ in Order.STATE_CHOICES 
+#             if code != 'basket'
+#         ]
+        
+#         # Проверяем, что новый статус допустим для магазина
+#         if new_status not in valid_statuses_for_shop:
+#             # Формируем понятное сообщение об ошибке
+#             status_list = ", ".join([
+#                 f"'{code}' ({display})" 
+#                 for code, display in Order.STATE_CHOICES 
+#                 if code != 'basket'
+#             ])
+            
+#             return JsonResponse({
+#                 'Status': False,
+#                 'Error': f'Недопустимый статус для магазина. Допустимо: {status_list}'
+#             }, status=400)
+
+#         # 6. Ищем заказ, принадлежащий магазину пользователя
+#         order = get_object_or_404(Order,
+#             id=order_id,
+#             ordered_items__product_info__shop__user_id=request.user.id
+#         )
+
+#         # 8. Проверяем, что статус действительно изменился
+#         old_status = order.state
+#         if old_status == new_status:
+#             return JsonResponse({'Status': True, 'Message': 'Статус не изменился'})
+
+#         # 9. Дополнительные проверки бизнес-логики (опционально)
+#         if old_status == 'canceled':
+#             return JsonResponse({
+#                 'Status': False,
+#                 'Error': 'Нельзя изменить статус отмененного заказа'
+#             }, status=400)
+
+#         if old_status == 'delivered':
+#             return JsonResponse({
+#                 'Status': False,
+#                 'Error': 'Нельзя изменить статус доставленного заказа'
+#             }, status=400)
+
+#         # 10. Обновляем статус заказа
+#         order.state = new_status
+#         order.save()
+
+#         # 11. Отправляем сигнал об изменении статуса
+#         order_status_changed.send(
+#             sender=self.__class__,
+#             order_id=order.id,
+#             user_id=order.user.id,
+#             old_status=old_status,
+#             new_status=new_status,
+#             updated_by=request.user.id
+#         )
+
+#         # 12. Возвращаем успешный ответ
+#         return JsonResponse({
+#             'Status': True,
+#             'Message': f'Статус заказа #{order_id} изменен на "{order.get_state_display()}"',
+#             'Order': {
+#                 'id': order.id,
+#                 'old_status': old_status,
+#                 'new_status': new_status,
+#                 'new_status_display': order.get_state_display()
+#             }
+#         })
+
+class PartnerOrderStatus(APIView):
+    """ Изменение статуса заказа магазином """
+
+    def patch(self, request):
+        """
+        Изменить статус заказа 
+        {
+            "order_id": 1,
+            "status": "confirmed"
+        }
+        """
+        
+        #  Валидация 
+        serializer = PartnerOrderStatusSerializer(data=request.data)
+        if not serializer.is_valid():
+            return JsonResponse({
+                'Status': False,
+                'Errors': serializer.errors
+            }, status=400)
+       
+        order_id = serializer.validated_data['order_id']
+        new_status = serializer.validated_data['status']
+        
+
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        if request.user.type != 'shop':
+            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+
+        # Ищем заказы, статус которых можно менять
+        order = get_object_or_404(
+            Order,
+            id=order_id,
+            ordered_items__product_info__shop__user_id=request.user.id,
+            state__in=['new', 'confirmed', 'assembled', 'sent']  
+        )
+
+        #  Проверяем, что статус  изменился
+        old_status = order.state
+        if old_status == new_status:
+            return JsonResponse({'Status': True, 'Message': 'Статус не изменился'})
+
+       
+        # if old_status == 'canceled':
+        #     return JsonResponse({
+        #         'Status': False,
+        #         'Error': 'Нельзя изменить статус отмененного заказа'
+        #     }, status=400)
+
+        # if old_status == 'delivered':
+        #     return JsonResponse({
+        #         'Status': False,
+        #         'Error': 'Нельзя изменить статус доставленного заказа'
+        #     }, status=400)
+
+        
+        # Двигать статус можно только "вперед"
+        status_flow = ['new', 'confirmed', 'assembled', 'sent', 'delivered']
+        if old_status in status_flow and new_status in status_flow:
+            old_index = status_flow.index(old_status)
+            new_index = status_flow.index(new_status)
+            if new_index < old_index:  
+                return JsonResponse({
+                    'Status': False,
+                    'Error': f'Нельзя изменить статус с "{old_status}" на "{new_status}"'
+                }, status=400)
+
+        
+        order.state = new_status
+        order.save()
+
+        # Отправляем сигнал 
+      
+        order_status_changed.send(
+            sender=self.__class__,
+            order_id=order.id,
+            user_id=order.user.id,
+            old_status=old_status,
+            new_status=new_status,
+            updated_by=request.user.id
+        )
+        
+        return JsonResponse({
+            'Status': True,
+            'Message': f'Статус заказа #{order_id} изменен на "{order.get_state_display()}"',
+            'Order': {
+                'id': order.id,
+                'old_status': old_status,
+                'new_status': new_status,
+                'new_status_display': order.get_state_display()
+            }
+        })
+    

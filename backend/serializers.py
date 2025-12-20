@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from backend.models import User, Category, Shop, ProductInfo, Product, ProductParameter, OrderItem, Order, Contact, USER_TYPE_CHOICES
-
+from backend.models import STATE_CHOICES
 
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
@@ -132,15 +132,15 @@ class PartnerOrderItemUpdateSerializer(serializers.Serializer):
         """Дополнительная валидация списка updates"""
         for i, update in enumerate(value):
             # Проверяем обязательные поля
-            if 'item_id' not in update or 'quantity' not in update:
+            if 'id' not in update or 'quantity' not in update:
                 raise serializers.ValidationError(
-                    f"Элемент #{i}: отсутствуют item_id или quantity"
+                    f"Элемент #{i}: отсутствуют id или quantity"
                 )
             
             # Проверяем типы
             try:
-                item_id = int(update['item_id'])
-                if item_id <= 0:
+                id = int(update['id'])
+                if id <= 0:
                     raise serializers.ValidationError(
                         f"Элемент #{i}: item_id должен быть положительным числом"
                     )
@@ -170,7 +170,7 @@ class PartnerOrderStatusSerializer(serializers.Serializer):
     
     def validate_status(self, value):
         """Проверка допустимости статуса"""
-        valid_statuses = [code for code, _ in Order.STATE_CHOICES if code != 'basket']
+        valid_statuses = [code for code, _ in STATE_CHOICES if code != 'basket']
         
         if value not in valid_statuses:
             status_list = ", ".join([f"'{s}'" for s in valid_statuses])

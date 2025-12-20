@@ -1069,43 +1069,43 @@ class OrderView(APIView):
             return JsonResponse({'Status': False, 'Errors': 'Не указан contact'}, status=400)
         
         try:
-                contact_id = int(request.data['contact'])
-                
-                # Находим корзину пользователя. Корзина всегда 1, поэтому в запросе ее не передаем
-                basket = Order.objects.filter(
-                    user_id=request.user.id, 
-                    state='basket'
-                ).first()
-                
-                if not basket:
-                    return JsonResponse({
-                        'Status': False, 
-                        'Errors': 'Корзина не найдена'
-                    }, status=400)
-                
-                if basket.ordered_items.count() == 0:
-                    return JsonResponse({
-                        'Status': False, 
-                        'Errors': 'Корзина пуста'
-                    }, status=400)
-                
-                # Оформляем заказ
-                basket.contact_id = contact_id
-                basket.state = 'new'
-                basket.save()
-                
-                # Отправляем сигнал о новом заказе
-                new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
-                
+            contact_id = int(request.data['contact'])
+            
+            # Находим корзину пользователя. Корзина всегда 1, поэтому в запросе ее не передаем
+            basket = Order.objects.filter(
+                user_id=request.user.id, 
+                state='basket'
+            ).first()
+            
+            if not basket:
                 return JsonResponse({
-                    'Status': True,
-                    'Message': f'Заказ #{basket.id} успешно оформлен',
-                    'Order': {
-                        'id': basket.id,
-                        'state': 'new',
-                        'contact_id': contact_id
-                    }
-                })
+                    'Status': False, 
+                    'Errors': 'Корзина не найдена'
+                }, status=400)
+            
+            if basket.ordered_items.count() == 0:
+                return JsonResponse({
+                    'Status': False, 
+                    'Errors': 'Корзина пуста'
+                }, status=400)
+            
+            # Оформляем заказ
+            basket.contact_id = contact_id
+            basket.state = 'new'
+            basket.save()
+            
+            # Отправляем сигнал о новом заказе
+            new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
+            
+            return JsonResponse({
+                'Status': True,
+                'Message': f'Заказ #{basket.id} успешно оформлен',
+                'Order': {
+                    'id': basket.id,
+                    'state': 'new',
+                    'contact_id': contact_id
+                }
+            })
                     
         except (ValueError, TypeError):
                 return JsonResponse({
@@ -1117,8 +1117,6 @@ class OrderView(APIView):
                     'Status': False, 
                     'Errors': f'Ошибка базы данных: {str(error)}'
                 })        
-
-
 
         # if {'id', 'contact'}.issubset(request.data):
         #     try:
@@ -1165,6 +1163,8 @@ class OrderView(APIView):
 class PartnerOrderItemQuantity(APIView):
     """Изменение количества товаров в заказе"""
 
+
+    
     def patch(self, request):
         """
         Обновление количества товаров в заказе
@@ -1172,10 +1172,12 @@ class PartnerOrderItemQuantity(APIView):
         {
             "order_id": 123,
             "updates": [
-                {"item_id": 456, "quantity": 3}
+                {"id": 456, "quantity": 3},  // id - строка заказа
+                {"id": 457, "quantity": 0}
             ]
         }
         """
+       
         serializer = PartnerOrderItemUpdateSerializer(data=request.data)
         if not serializer.is_valid():
             return JsonResponse({
@@ -1191,25 +1193,37 @@ class PartnerOrderItemQuantity(APIView):
            
         order_id = serializer.validated_data['order_id']
         updates = serializer.validated_data['updates']
-        order = get_object_or_404(Order,
+
+        # Поиск заказа с проверкой принадлежности магазину
+        order = Order.objects.filter(
             id=order_id,
             ordered_items__product_info__shop__user_id=request.user.id
-        )
-        
+        ).distinct().first()
+
+        if not order:
+            return JsonResponse({
+                'Status': False,
+                'Error': f'Заказ #{order_id} не найден или недоступен'
+            }, status=404)
+ 
         changes = []  # Список для всех изменений
         
         for update in updates:
-            item_id = update['item_id']
+            id = update['id']
             new_quantity = update['quantity']
-            
-            # Поиск товара
-            order_item = get_object_or_404(
-                OrderItem,
-                id=item_id,
-                order=order,
-                product_info__shop__user_id=request.user.id
-)
-             
+
+            # Поиск товара (строки) в заказе
+            try:
+                order_item = OrderItem.objects.get(
+                    id=id,
+                    order=order,
+                    product_info__shop__user_id=request.user.id
+                )
+            except OrderItem.DoesNotExist:
+                return JsonResponse({
+                    'Status': False,
+                    'Error': f'Строка #{id} не найден в заказе или недоступен'
+                }, status=404)
             
             # Проверка изменения
             old_quantity = order_item.quantity
@@ -1324,7 +1338,7 @@ class PartnerOrderStatus(APIView):
         
         order.state = new_status
         order.save()
-
+        print(f' {old_status}')
         # Отправляем сигнал 
       
         order_status_changed.send(
@@ -1336,6 +1350,8 @@ class PartnerOrderStatus(APIView):
             updated_by=request.user.id
         )
         
+
+
         return JsonResponse({
             'Status': True,
             'Message': f'Статус заказа #{order_id} изменен на "{order.get_state_display()}"',
@@ -1347,3 +1363,4 @@ class PartnerOrderStatus(APIView):
             }
         })
     
+

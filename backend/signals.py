@@ -98,7 +98,7 @@ def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
             print (f"Для тестирования: {token.key}")
             msg = EmailMultiAlternatives(
                 subject="Подтверждение регистрации в интернет магазине",
-                body=body.strip(),
+                body=body,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[instance.email]
             )
@@ -149,15 +149,15 @@ def new_order_signal(user_id, **kwargs):
         user = User.objects.get(id=user_id)
         order_id = kwargs.get('order_id', '')
         body=f"""
-            Здравствуйте, {user.first_name}!
+            Здравствуйте, {user.first_name} {user.last_name}!
             
             Ваш заказ успешно оформлен и принят в обработку.
             
             Спасибо за покупку!
-            """,
+            """
         msg = EmailMultiAlternatives(
             subject=f"Ваш заказ № {order_id} оформлен",
-            body=body.strip(),
+            body=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[user.email]
         )
@@ -180,7 +180,7 @@ def order_status_changed_signal(order_id, user_id, old_status, new_status, **kwa
         body = f"""
         Здравствуйте, {user.first_name} {user.last_name}!
         
-        Статус вашего заказа №{order_id} изменен c "{old_status}" на "{new_status}".
+        Статус вашего заказа №{order_id} изменен".
         
         Детали заказа:
         - Номер: {order_id}
@@ -193,7 +193,7 @@ def order_status_changed_signal(order_id, user_id, old_status, new_status, **kwa
 
         msg = EmailMultiAlternatives(
             subject=f"Статус заказа #{order_id} обновлен",
-            body=body.strip(),
+            body=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[user.email]
         )
@@ -243,7 +243,7 @@ def order_item_quantity_changed_signal(order_id, user_id, changes, **kwargs):
         
         msg = EmailMultiAlternatives(
             subject=f"Изменение состава заказа #{order_id}",
-            body=body.strip(),
+            body=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[user.email]
         )

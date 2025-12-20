@@ -1,0 +1,582 @@
+[
+    {
+        "id": 2,
+        "ordered_items": [
+            {
+                "id": 4,
+                "product_info": {
+                    "id": 73,
+                    "model": "vizio/p-series-quantum",
+                    "product": {
+                        "name": "Vizio P-Series Quantum 65\" 4K UHD Smart TV",
+                        "category": "Телевизоры"
+                    },
+                    "shop": 1,
+                    "quantity": 5,
+                    "price": "2200.00",
+                    "price_rrc": "3299.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Screen Size (inches)",
+                            "value": "444"
+                        },
+                        {
+                            "parameter": "Resolution (pixels)",
+                            "value": "3840x2160"
+                        },
+                        {
+                            "parameter": "Smart TV",
+                            "value": "True"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 5,
+                "product_info": {
+                    "id": 74,
+                    "model": "apple/macbook-pro-16",
+                    "product": {
+                        "name": "Ноутбук Apple MacBook Pro 16\" M3 Pro 512GB (Space Black)",
+                        "category": "Ноутбуки"
+                    },
+                    "shop": 5,
+                    "quantity": 8,
+                    "price": "250000.00",
+                    "price_rrc": "269990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ экрана (дюйм)",
+                            "value": "16.2"
+                        },
+                        {
+                            "parameter": "Процессор",
+                            "value": "Apple M3 Pro"
+                        },
+                        {
+                            "parameter": "Оперативная память (ГБ)",
+                            "value": "18"
+                        },
+                        {
+                            "parameter": "Накопитель (ГБ)",
+                            "value": "512"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "Space Black"
+                        }
+                    ]
+                },
+                "quantity": 2
+            }
+        ],
+        "state": "delivered",
+        "dt": "2025-12-15T17:47:11.598862Z",
+        "total_sum": 4400,
+        "contact": {
+            "id": 2,
+            "city": "Санкт-Петербург",
+            "street": "Невский проспект, 10",
+            "house": "",
+            "structure": "",
+            "building": "",
+            "apartment": "",
+            "phone": "+79998887766"
+        }
+    },
+    {
+        "id": 3,
+        "ordered_items": [
+            {
+                "id": 6,
+                "product_info": {
+                    "id": 74,
+                    "model": "apple/macbook-pro-16",
+                    "product": {
+                        "name": "Ноутбук Apple MacBook Pro 16\" M3 Pro 512GB (Space Black)",
+                        "category": "Ноутбуки"
+                    },
+                    "shop": 5,
+                    "quantity": 8,
+                    "price": "250000.00",
+                    "price_rrc": "269990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ экрана (дюйм)",
+                            "value": "16.2"
+                        },
+                        {
+                            "parameter": "Процессор",
+                            "value": "Apple M3 Pro"
+                        },
+                        {
+                            "parameter": "Оперативная память (ГБ)",
+                            "value": "18"
+                        },
+                        {
+                            "parameter": "Накопитель (ГБ)",
+                            "value": "512"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "Space Black"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 7,
+                "product_info": {
+                    "id": 58,
+                    "model": "apple/iphone/xs-max",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XS Max 512GB (золотистый)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 14,
+                    "price": "110000.00",
+                    "price_rrc": "116990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.5"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "2688x1242"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "512"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "золотистый"
+                        }
+                    ]
+                },
+                "quantity": 1
+            }
+        ],
+        "state": "new",
+        "dt": "2025-12-15T18:26:54.049673Z",
+        "total_sum": 110000,
+        "contact": {
+            "id": 3,
+            "city": "Москва",
+            "street": "Московский проспект, 10",
+            "house": "",
+            "structure": "",
+            "building": "",
+            "apartment": "",
+            "phone": "+71998887766"
+        }
+    },
+    {
+        "id": 4,
+        "ordered_items": [
+            {
+                "id": 9,
+                "product_info": {
+                    "id": 67,
+                    "model": "samsung/qled-q90r",
+                    "product": {
+                        "name": "Samsung QLED Q90R 65\" 4K UHD Smart TV",
+                        "category": "Телевизоры"
+                    },
+                    "shop": 1,
+                    "quantity": 4,
+                    "price": "2500.00",
+                    "price_rrc": "2999.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Screen Size (inches)",
+                            "value": "65"
+                        },
+                        {
+                            "parameter": "Resolution (pixels)",
+                            "value": "3840x2160"
+                        },
+                        {
+                            "parameter": "Smart TV",
+                            "value": "True"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 10,
+                "product_info": {
+                    "id": 73,
+                    "model": "vizio/p-series-quantum",
+                    "product": {
+                        "name": "Vizio P-Series Quantum 65\" 4K UHD Smart TV",
+                        "category": "Телевизоры"
+                    },
+                    "shop": 1,
+                    "quantity": 5,
+                    "price": "2200.00",
+                    "price_rrc": "3299.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Screen Size (inches)",
+                            "value": "444"
+                        },
+                        {
+                            "parameter": "Resolution (pixels)",
+                            "value": "3840x2160"
+                        },
+                        {
+                            "parameter": "Smart TV",
+                            "value": "True"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 11,
+                "product_info": {
+                    "id": 60,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 256GB (черный)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 5,
+                    "price": "65000.00",
+                    "price_rrc": "69990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "черный"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 12,
+                "product_info": {
+                    "id": 61,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 128GB (синий)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 7,
+                    "price": "60000.00",
+                    "price_rrc": "64990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "синий"
+                        }
+                    ]
+                },
+                "quantity": 2
+            }
+        ],
+        "state": "confirmed",
+        "dt": "2025-12-20T11:00:34.335410Z",
+        "total_sum": 259400,
+        "contact": {
+            "id": 4,
+            "city": "Воронеж",
+            "street": "Московский проспект, 10",
+            "house": "",
+            "structure": "",
+            "building": "",
+            "apartment": "",
+            "phone": "+71998887766"
+        }
+    },
+    {
+        "id": 5,
+        "ordered_items": [
+            {
+                "id": 13,
+                "product_info": {
+                    "id": 60,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 256GB (черный)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 5,
+                    "price": "65000.00",
+                    "price_rrc": "69990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "черный"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 14,
+                "product_info": {
+                    "id": 61,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 128GB (синий)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 7,
+                    "price": "60000.00",
+                    "price_rrc": "64990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "синий"
+                        }
+                    ]
+                },
+                "quantity": 2
+            }
+        ],
+        "state": "new",
+        "dt": "2025-12-20T11:52:40.705974Z",
+        "total_sum": 250000,
+        "contact": {
+            "id": 4,
+            "city": "Воронеж",
+            "street": "Московский проспект, 10",
+            "house": "",
+            "structure": "",
+            "building": "",
+            "apartment": "",
+            "phone": "+71998887766"
+        }
+    },
+    {
+        "id": 6,
+        "ordered_items": [
+            {
+                "id": 15,
+                "product_info": {
+                    "id": 60,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 256GB (черный)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 5,
+                    "price": "65000.00",
+                    "price_rrc": "69990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "черный"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 16,
+                "product_info": {
+                    "id": 61,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 128GB (синий)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 7,
+                    "price": "60000.00",
+                    "price_rrc": "64990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "синий"
+                        }
+                    ]
+                },
+                "quantity": 2
+            }
+        ],
+        "state": "new",
+        "dt": "2025-12-20T11:55:00.838984Z",
+        "total_sum": 250000,
+        "contact": {
+            "id": 4,
+            "city": "Воронеж",
+            "street": "Московский проспект, 10",
+            "house": "",
+            "structure": "",
+            "building": "",
+            "apartment": "",
+            "phone": "+71998887766"
+        }
+    },
+    {
+        "id": 7,
+        "ordered_items": [
+            {
+                "id": 17,
+                "product_info": {
+                    "id": 60,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 256GB (черный)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 5,
+                    "price": "65000.00",
+                    "price_rrc": "69990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "черный"
+                        }
+                    ]
+                },
+                "quantity": 2
+            },
+            {
+                "id": 18,
+                "product_info": {
+                    "id": 61,
+                    "model": "apple/iphone/xr",
+                    "product": {
+                        "name": "Смартфон Apple iPhone XR 128GB (синий)",
+                        "category": "Смартфоны"
+                    },
+                    "shop": 1,
+                    "quantity": 7,
+                    "price": "60000.00",
+                    "price_rrc": "64990.00",
+                    "product_parameters": [
+                        {
+                            "parameter": "Диагональ (дюйм)",
+                            "value": "6.1"
+                        },
+                        {
+                            "parameter": "Разрешение (пикс)",
+                            "value": "1792x828"
+                        },
+                        {
+                            "parameter": "Встроенная память (Гб)",
+                            "value": "256"
+                        },
+                        {
+                            "parameter": "Цвет",
+                            "value": "синий"
+                        }
+                    ]
+                },
+                "quantity": 2
+            }
+        ],
+        "state": "new",
+        "dt": "2025-12-20T11:57:54.768611Z",
+        "total_sum": 250000,
+        "contact": {
+            "id": 4,
+            "city": "Воронеж",
+            "street": "Московский проспект, 10",
+            "house": "",
+            "structure": "",
+            "building": "",
+            "apartment": "",
+            "phone": "+71998887766"
+        }
+    }
+]

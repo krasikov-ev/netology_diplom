@@ -72,6 +72,7 @@ def password_reset_token_created(sender, instance, reset_password_token, **kwarg
 #         )
 #         msg.send()
 
+
 @receiver(post_save, sender=User)
 def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
     """
@@ -92,7 +93,9 @@ def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
                 - token: {token.key}
                 
                 Если вы не регистрировались, проигнорируйте это письмо.
+            
                 """
+            print (f"Для тестирования: {token.key}")
             msg = EmailMultiAlternatives(
                 subject="Подтверждение регистрации в интернет магазине",
                 body=body.strip(),
@@ -102,6 +105,8 @@ def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
             msg.send()
         except Exception as e:
             print(f"Failed to send confirmation email to {instance.email}: {e}")
+
+
 # @receiver(post_save, sender=User)
 # def new_user_registered_signal(sender: Type[User], instance: User, created: bool, **kwargs):
 #     """
@@ -134,25 +139,7 @@ def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
 #             # НЕ ПОДНИМАЕМ ИСКЛЮЧЕНИЕ - пользователь уже создан
 
 
-# @receiver(new_order)
-# def new_order_signal(user_id, **kwargs):
-#     """
-#     отправяем письмо при создании  заказа
-#     """
-#     # send an e-mail to the user
-#     user = User.objects.get(id=user_id)
 
-#     msg = EmailMultiAlternatives(
-#         # title:
-#         f"Обновление статуса заказа",
-#         # message:
-#         'Заказ сформирован',
-#         # from:
-#         settings.EMAIL_HOST_USER,
-#         # to:
-#         [user.email]
-#     )
-#     msg.send()
 @receiver(new_order)
 def new_order_signal(user_id, **kwargs):
     """
@@ -179,8 +166,6 @@ def new_order_signal(user_id, **kwargs):
         
     except Exception as e:
         print(f"Failed to send new order email to user #{user_id}: {e}")
-
-
 
 
 @receiver(order_status_changed)

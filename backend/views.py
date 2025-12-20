@@ -1058,181 +1058,109 @@ class OrderView(APIView):
     def post(self, request, *args, **kwargs):
         """
         Оформить заказ из корзины
+        {
+        "contact": 3
+        }
+
         """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-        if {'id', 'contact'}.issubset(request.data):
-            try:
-                # Пробуем преобразовать id в число (обрабатываем и строку, и int)
-                order_id = int(request.data['id'])
+        if 'contact' not in request.data:
+            return JsonResponse({'Status': False, 'Errors': 'Не указан contact'}, status=400)
+        
+        try:
                 contact_id = int(request.data['contact'])
                 
-                is_updated = Order.objects.filter(
+                # Находим корзину пользователя. Корзина всегда 1, поэтому в запросе ее не передаем
+                basket = Order.objects.filter(
                     user_id=request.user.id, 
-                    id=order_id,
-                    state='basket'  # Добавляем фильтр по статусу 'basket'
-                ).update(
-                    contact_id=contact_id,
-                    state='new'
-                )
+                    state='basket'
+                ).first()
                 
-                if is_updated:
-                    # Отправляем сигнал о новом заказе
-                    new_order.send(sender=self.__class__, user_id=request.user.id, order_id=request.order.id)
-                    return JsonResponse({'Status': True})
-                else:
+                if not basket:
                     return JsonResponse({
                         'Status': False, 
-                        'Errors': 'Корзина не найдена или уже оформлена'
+                        'Errors': 'Корзина не найдена'
                     }, status=400)
+                
+                if basket.ordered_items.count() == 0:
+                    return JsonResponse({
+                        'Status': False, 
+                        'Errors': 'Корзина пуста'
+                    }, status=400)
+                
+                # Оформляем заказ
+                basket.contact_id = contact_id
+                basket.state = 'new'
+                basket.save()
+                
+                # Отправляем сигнал о новом заказе
+                new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
+                
+                return JsonResponse({
+                    'Status': True,
+                    'Message': f'Заказ #{basket.id} успешно оформлен',
+                    'Order': {
+                        'id': basket.id,
+                        'state': 'new',
+                        'contact_id': contact_id
+                    }
+                })
                     
-            except (ValueError, TypeError):
+        except (ValueError, TypeError):
                 return JsonResponse({
                     'Status': False, 
-                    'Errors': 'Некорректный формат ID'
+                    'Errors': 'Некорректный формат contact ID'
                 }, status=400)
-            except IntegrityError as error:
+        except IntegrityError as error:
                 return JsonResponse({
                     'Status': False, 
                     'Errors': f'Ошибка базы данных: {str(error)}'
-                })
+                })        
 
-        return JsonResponse({
-            'Status': False, 
-            'Errors': 'Не указаны все необходимые аргументы'
-        }, status=400)
-    
 
-# class PartnerOrderItemQuantity(APIView):
-#     """ Изменение количества товаров в заказе ( """
 
-#     def patch(self, request, order_id):
-#         """
-#         Обновление количества товаров в заказе
-        
-#         {
-#             "order_id": 123,
-#             "updates": [
-#                 {"item_id": 456, "quantity": 3}
-#             ]
-#         }
-#         """
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-#         if request.user.type != 'shop':
-#             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
-
-#         updates = request.data.get('updates')
-
-#         if not updates or not isinstance(updates, list):
-#             return JsonResponse({
-#                 'Status': False, 
-#                 'Error': 'Неверный формат: updates должен быть списком'
-#             }, status=400)
-
-#         if len(updates) == 0:
-#             return JsonResponse({
-#                 'Status': False, 
-#                 'Error': 'Список updates не должен быть пустым'
-#             }, status=400)
-        
-#         order = get_object_or_404(Order,
-#             id=order_id,
-#             ordered_items__product_info__shop__user_id=request.user.id
-#         )
-
-#         changes = []
-#         errors = []
-#         for i, update in enumerate(request.data['updates']):
-#             try:
-#                 # Проверка обязательных полей
-#                 if 'item_id' not in update or 'quantity' not in update:
-#                     errors.append(f"Элемент {i}: отсутствуют обязательные поля")
-#                     continue
+        # if {'id', 'contact'}.issubset(request.data):
+        #     try:
+        #         # Пробуем преобразовать id в число (обрабатываем и строку, и int)
+        #         order_id = int(request.data['id'])
+        #         contact_id = int(request.data['contact'])
                 
-#                 # Преобразование к int
-#                 try:
-#                     item_id = int(update['item_id'])
-#                 except (ValueError, TypeError):
-#                     errors.append(f"Элемент {i}: некорректный item_id")
-#                     continue
+        #         is_updated = Order.objects.filter(
+        #             user_id=request.user.id, 
+        #             id=order_id,
+        #             state='basket'  # Добавляем фильтр по статусу 'basket'
+        #         ).update(
+        #             contact_id=contact_id,
+        #             state='new'
+        #         )
                 
-#                 try:
-#                     new_quantity = int(update['quantity'])
-#                 except (ValueError, TypeError):
-#                     errors.append(f"Элемент {i}: некорректное количество")
-#                     continue
-                
-#                 if new_quantity < 0:
-#                     errors.append(f"Элемент {i}: количество не может быть отрицательным")
-#                     continue    
-                
-#                 # Ищем товар в заказе
-#                 order_item = OrderItem.objects.filter(
-#                     id=item_id,
-#                     order=order,
-#                     product_info__shop__user_id=request.user.id
-#                 ).first()
-                
-#                 if not order_item:
-#                     continue
-                
-#                 old_quantity = order_item.quantity
-                
-#                 # Пропускаем если количество не изменилось
-#                 if new_quantity == old_quantity:
-#                     continue
-                
-#                 # Только в этих статусах можно менять товар
-#                 if order.state not in ['new', 'confirmed', 'assembled']:
-#                     continue
-    
-#                 # Формируем запись об изменении
-#                 change_record = {
-#                     'item_id': order_item.id,
-#                     'product_name': order_item.product_info.product.name,
-#                     'old_quantity': old_quantity,
-#                     'new_quantity': new_quantity,
-#                     'price': order_item.product_info.price,
-#                     'action': 'updated' if new_quantity > 0 else 'removed'
-#                 }
-                
-#                 changes.append(change_record)
-                
-#                 # Сохраняем изменения
-#                 if new_quantity == 0:
-#                     order_item.delete()
-#                 else:
-#                     order_item.quantity = new_quantity
-#                     order_item.save()
+        #         if is_updated:
+        #             # Отправляем сигнал о новом заказе
+        #             new_order.send(sender=self.__class__, user_id=request.user.id, order_id=request.order.id)
+        #             return JsonResponse({'Status': True})
+        #         else:
+        #             return JsonResponse({
+        #                 'Status': False, 
+        #                 'Errors': 'Корзина не найдена или уже оформлена'
+        #             }, status=400)
                     
-#             except (ValueError, TypeError):
-#                 continue
-        
-#         # Если нет изменений 
-#         if not changes:
-#             return JsonResponse({
-#                 'Status': True, 
-#                 'Message': 'Нет изменений для обработки'
-#             })
-        
-#         # Отправляем сигнал со всеми изменениями
-#         order_item_quantity_changed.send(
-#             sender=self.__class__,
-#             order_id=order.id,
-#             user_id=order.user.id,
-#             changes=changes,
-#             changed_by=request.user.id
-#         )
-        
-#         return JsonResponse({
-#             'Status': True,
-#             'Message': f'Обновлено {len(changes)} товар(ов)',
-#             'Changes': changes
-#         })
+        #     except (ValueError, TypeError):
+        #         return JsonResponse({
+        #             'Status': False, 
+        #             'Errors': 'Некорректный формат ID'
+        #         }, status=400)
+        #     except IntegrityError as error:
+        #         return JsonResponse({
+        #             'Status': False, 
+        #             'Errors': f'Ошибка базы данных: {str(error)}'
+        #         })
 
+        # return JsonResponse({
+        #     'Status': False, 
+        #     'Errors': 'Не указаны все необходимые аргументы'
+        # }, status=400)
+    
 
 class PartnerOrderItemQuantity(APIView):
     """Изменение количества товаров в заказе"""
@@ -1324,101 +1252,6 @@ class PartnerOrderItemQuantity(APIView):
             'Changes': changes
         })
     
-
-# class PartnerOrderStatus(APIView):
-#     """ Изменение статуса заказа магазином """
-
-#     def patch(self, request):
-#         """
-#         Изменить статус заказа 
-#         {
-#             "order_id": 1,
-#             "status": "confirmed"
-#         }
-#         """
-        
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-       
-#         if request.user.type != 'shop':
-#             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
-
-        
-#         if 'status' not in request.data:
-#             return JsonResponse({'Status': False, 'Error': 'Не указан status'}, status=400)
-
-#         new_status = request.data['status']
-        
-#         # Исключаем 'basket' - магазин не может вернуть заказ в корзину
-#         valid_statuses_for_shop = [
-#             code for code, _ in Order.STATE_CHOICES 
-#             if code != 'basket'
-#         ]
-        
-#         # Проверяем, что новый статус допустим для магазина
-#         if new_status not in valid_statuses_for_shop:
-#             # Формируем понятное сообщение об ошибке
-#             status_list = ", ".join([
-#                 f"'{code}' ({display})" 
-#                 for code, display in Order.STATE_CHOICES 
-#                 if code != 'basket'
-#             ])
-            
-#             return JsonResponse({
-#                 'Status': False,
-#                 'Error': f'Недопустимый статус для магазина. Допустимо: {status_list}'
-#             }, status=400)
-
-#         # 6. Ищем заказ, принадлежащий магазину пользователя
-#         order = get_object_or_404(Order,
-#             id=order_id,
-#             ordered_items__product_info__shop__user_id=request.user.id
-#         )
-
-#         # 8. Проверяем, что статус действительно изменился
-#         old_status = order.state
-#         if old_status == new_status:
-#             return JsonResponse({'Status': True, 'Message': 'Статус не изменился'})
-
-#         # 9. Дополнительные проверки бизнес-логики (опционально)
-#         if old_status == 'canceled':
-#             return JsonResponse({
-#                 'Status': False,
-#                 'Error': 'Нельзя изменить статус отмененного заказа'
-#             }, status=400)
-
-#         if old_status == 'delivered':
-#             return JsonResponse({
-#                 'Status': False,
-#                 'Error': 'Нельзя изменить статус доставленного заказа'
-#             }, status=400)
-
-#         # 10. Обновляем статус заказа
-#         order.state = new_status
-#         order.save()
-
-#         # 11. Отправляем сигнал об изменении статуса
-#         order_status_changed.send(
-#             sender=self.__class__,
-#             order_id=order.id,
-#             user_id=order.user.id,
-#             old_status=old_status,
-#             new_status=new_status,
-#             updated_by=request.user.id
-#         )
-
-#         # 12. Возвращаем успешный ответ
-#         return JsonResponse({
-#             'Status': True,
-#             'Message': f'Статус заказа #{order_id} изменен на "{order.get_state_display()}"',
-#             'Order': {
-#                 'id': order.id,
-#                 'old_status': old_status,
-#                 'new_status': new_status,
-#                 'new_status_display': order.get_state_display()
-#             }
-#         })
 
 class PartnerOrderStatus(APIView):
     """ Изменение статуса заказа магазином """

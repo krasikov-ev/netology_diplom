@@ -72,7 +72,7 @@ from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
 from setuptools._distutils.util import strtobool
 
-# Локальные импорты
+
 from backend.models import (
     User, USER_TYPE_CHOICES,
     Shop, Category, Product, ProductInfo, 
@@ -291,6 +291,7 @@ class RegisterAccount(APIView):
                     user.set_password(request.data['password'])
                     user.is_active = False  
                     user.type = user_type
+                    user.is_staff = True # для пользования админкой
                     user.save()
 
                     # Создаем токен подтверждения

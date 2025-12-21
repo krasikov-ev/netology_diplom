@@ -7,6 +7,9 @@ from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from django_rest_passwordreset.tokens import get_token_generator
 
+
+
+
 STATE_CHOICES = (
     ('basket', 'Статус корзины'),
     ('new', 'Новый'),
@@ -170,7 +173,11 @@ class ProductInfo(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['product', 'shop', 'external_id'], name='unique_product_info'),
         ]
-
+    def __str__(self):
+        """Человекочитаемое отображение ProductInfo"""
+        product_name = self.product.name if self.product else 'Без названия'
+        shop_name = self.shop.name if self.shop else 'Без магазина'
+        return f"{product_name} - {shop_name} (модель: {self.model})"
 
 class Parameter(models.Model):
     # objects = models.manager.Manager()
@@ -217,7 +224,7 @@ class Contact(models.Model):
 
     class Meta:
         verbose_name = 'Контакты пользователя'
-        verbose_name_plural = "Список контактов пользователя"
+        verbose_name_plural = "Список контактов пользователей"
 
     def __str__(self):
         return f'{self.city} {self.street} {self.house}'

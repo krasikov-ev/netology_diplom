@@ -219,11 +219,14 @@ def order_item_quantity_changed_signal(order_id, user_id, changes, **kwargs):
         message_text = []
         
         if removed_items:
+            message_text.append("")  
             message_text.append("Удаленные товары:")
             for item in removed_items:
                 message_text.append(f"  - {item['product_name']}: {item['old_quantity']} шт.")
         
         if updated_items:
+            if removed_items:  
+                message_text.append("")
             message_text.append("Измененные количества товаров:")
             for item in updated_items:
                 message_text.append(f"  - {item['product_name']}: {item['old_quantity']} → {item['new_quantity']} шт.")

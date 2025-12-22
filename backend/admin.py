@@ -12,15 +12,27 @@ from backend.models import User, Shop, Category, Product, ProductInfo, Parameter
 
 def is_shop_user(request):
     """Является ли пользователь магазином"""
-    return request.user.is_authenticated and request.user.type == 'shop'
+    user = request.user
+
+    if not user or user.is_anonymous:
+        return False
+    return user.type == 'shop'
 
 def is_buyer_user(request):
     """Является ли пользователь покупателем"""
-    return request.user.is_authenticated and request.user.type == 'buyer'
+    user = request.user
+    if not user or user.is_anonymous:
+        return False
+    return user.type == 'buyer'
 
 def is_superuser(request):
     """Является ли пользователь суперадмином"""
-    return request.user.is_authenticated and request.user.is_superuser
+    user = request.user
+  
+    if not user or user.is_anonymous:
+        return False
+    return user.is_superuser
+
 
 class BaseOrderItemAdmin:
     """Базовый класс с общей логикой для OrderItem"""
@@ -53,10 +65,18 @@ class ReadOnlyAdmin(admin.ModelAdmin):
     
     def has_module_permission(self, request):
         """Показывать модель в меню всем пользователям"""
-        return request.user.is_authenticated and request.user.is_staff
+        try:
+            return request.user and not request.user.is_anonymous and request.user.is_staff
+        except:
+            return False
     
     def has_view_permission(self, request, obj=None):
-        return request.user.is_authenticated and request.user.is_staff
+        try:
+            return request.user and not request.user.is_anonymous and request.user.is_staff
+        except:
+            return False
+
+
     
     def has_change_permission(self, request, obj=None):
         # Суперадмины могут менять
@@ -69,28 +89,19 @@ class ReadOnlyAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Суперадмины могут удалять
         return is_superuser(request)
-    
+
     def get_readonly_fields(self, request, obj=None):
         """Для суперадминов - нет readonly, для остальных - все поля"""
         if is_superuser(request):
-            # Суперадмины могут редактировать все поля
             return []
         
-        # Для остальных все поля только для чтения
-        if self.fields:
-            return list(self.fields)
-        elif self.get_fields(request, obj):
-            return list(self.get_fields(request, obj))
-        else:
-            return []
-    
-    # def get_exclude(self, request, obj=None):
-    #     """Скрываем поля если нужно"""
-    #     return super().get_exclude(request, obj)
-    
-    # def get_fields(self, request, obj=None):
-    #     """Определяем какие поля показывать"""
-    #     return super().get_fields(request, obj)
+        try:
+            if hasattr(self, 'model') and self.model:
+                return [field.name for field in self.model._meta.fields]
+        except:
+            pass
+        
+        return []
 
 
 class ShopFilter(SimpleListFilter):
@@ -108,8 +119,6 @@ class ShopFilter(SimpleListFilter):
         return queryset
 
 
-
-# ========== INLINE ФОРМЫ ==========
 class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
     """Товары в заказе - магазины могут менять количество и удалять свои товары"""
     model = OrderItem
@@ -138,7 +147,6 @@ class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
     get_total.short_description = 'Сумма'
     
     def has_add_permission(self, request, obj):
-        # Никто не может добавлять новые позиции через inline
         return False
     
     def has_delete_permission(self, request, obj=None):
@@ -151,14 +159,10 @@ class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
         
         # Если obj передан (это OrderItem) и это магазин
         if is_shop_user(request) and obj:
-            # ПРОВЕРЯЕМ что obj - это OrderItem, а не Order
             if hasattr(obj, 'product_info'):
                 shop = Shop.objects.filter(user=request.user).first()
                 if shop and obj.product_info:
-                    return obj.product_info.shop == shop
-        
-        # Для Order (когда obj=None или obj - это Order) магазины могут удалять
-        # через inline, но сам inline решает что можно удалять в get_queryset
+                    return obj.product_info.shop == shop    
         return True
     
     def has_change_permission(self, request, obj=None):
@@ -171,38 +175,11 @@ class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
         
         # Если obj передан (это OrderItem) и это магазин
         if is_shop_user(request) and obj:
-            # ПРОВЕРЯЕМ что obj - это OrderItem, а не Order
             if hasattr(obj, 'product_info'):
                 shop = Shop.objects.filter(user=request.user).first()
                 if shop and obj.product_info:
                     return obj.product_info.shop == shop
-        
-        # Для Order (когда obj=None или obj - это Order) магазины могут изменять
-        # через inline, но сам inline решает что можно менять в get_queryset
         return True
-    
-    # def get_queryset(self, request):
-    #     """Фильтруем позиции заказа в inline форме"""
-    #     qs = super().get_queryset(request)
-        
-    #     if not request.user.is_authenticated:
-    #         return qs.none()
-        
-    #     # Суперадмины видят всё
-    #     if is_superuser(request):
-    #         return qs
-        
-    #     # Магазины видят только позиции со своими товарами
-    #     if is_shop_user(request):
-    #         shop = Shop.objects.filter(user=request.user).first()
-    #         if shop:
-    #             return qs.filter(product_info__shop=shop)
-        
-    #     # Покупатели видят только позиции своих заказов
-    #     elif is_buyer_user(request):
-    #         return qs.filter(order__user=request.user)
-        
-    #     return qs.none()
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Ограничиваем выбор товара для магазинов"""
@@ -226,17 +203,15 @@ class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
         
         # Магазины могут менять только количество
         if is_shop_user(request):
-            return readonly_fields + ['product_info']  # product_info только для чтения
+            return readonly_fields + ['product_info']  
         
         # Покупатели не могут ничего менять
         return readonly_fields + ['product_info', 'quantity']
     
-    # Ключевое исправление: этот метод решает какие inline показывать
     def get_formset(self, request, obj=None, **kwargs):
         """Переопределяем formset для проверки прав"""
         formset = super().get_formset(request, obj, **kwargs)
-        
-        # Если редактируем заказ (obj - это Order)
+
         if obj and hasattr(obj, 'ordered_items'):
             # Проверяем права магазина на этот заказ
             if is_shop_user(request):
@@ -244,7 +219,6 @@ class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
                 if shop:
                     # Проверяем есть ли у магазина товары в этом заказе
                     if not obj.ordered_items.filter(product_info__shop=shop).exists():
-                        # Если нет товаров магазина в заказе - скрываем inline
                         formset.form.base_fields = {}
         
         return formset
@@ -359,6 +333,7 @@ class ProductInfoAdmin(ReadOnlyAdmin):
         return obj.product.category.name
     category_display.short_description = 'Категория'
 
+
 class ParameterAdmin(ReadOnlyAdmin):
     list_display = ('name', 'get_products_count')
     search_fields = ('name',)
@@ -380,6 +355,7 @@ class ProductParameterAdmin(ReadOnlyAdmin):
     def get_shop(self, obj):
         return obj.product_info.shop.name
     get_shop.short_description = 'Магазин'
+
 
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'dt', 'state', 'user_email', 'contact_info', 'display_total_sum', 'items_count')
@@ -477,7 +453,6 @@ class OrderAdmin(admin.ModelAdmin):
             return [field for field in base_list if field != 'user_email']
         return base_list
     
-    # Методы проверки прав
     def has_module_permission(self, request):
         """Все staff пользователи видят заказы в меню"""
         return request.user.is_authenticated and request.user.is_staff
@@ -510,7 +485,7 @@ class OrderAdmin(admin.ModelAdmin):
         return False
     
     def has_add_permission(self, request):
-        """Никто не может создавать заказы через админку"""
+        """Никто не может создавать заказы"""
         return False
     
     def has_delete_permission(self, request, obj=None):
@@ -611,26 +586,7 @@ class OrderItemAdmin(BaseOrderItemAdmin, admin.ModelAdmin):
             return f"{total} ₽"
         return '-'
     total_price.short_description = 'Сумма'
-    
-    # def get_queryset(self, request):
-    #     qs = super().get_queryset(request)
-        
-    #     if not request.user.is_authenticated:
-    #         return qs.none()
-        
-    #     if is_superuser(request):
-    #         return qs
-        
-    #     if is_shop_user(request):
-    #         shop = Shop.objects.filter(user=request.user).first()
-    #         if shop:
-    #             return qs.filter(product_info__shop=shop)
-        
-    #     elif is_buyer_user(request):
-    #         return qs.filter(order__user=request.user)
-        
-    #     return qs.none()
-    
+      
     def has_module_permission(self, request):
         """Показывать в меню всем пользователям"""
         return request.user.is_authenticated and request.user.is_staff
@@ -695,7 +651,7 @@ class OrderItemAdmin(BaseOrderItemAdmin, admin.ModelAdmin):
         return False
     
     def has_add_permission(self, request):
-        """Никто не может создавать позиции заказа через админку"""
+        """Никто не может создать"""
         return False
     
     def get_readonly_fields(self, request, obj=None):
@@ -746,7 +702,6 @@ class OrderItemAdmin(BaseOrderItemAdmin, admin.ModelAdmin):
             if obj.pk:
                 obj.delete()
                 return
-            # Если новая запись с количеством 0 - не сохраняем
             return
         
         # Для магазинов проверяем права на изменение
@@ -874,11 +829,32 @@ class ConfirmEmailTokenAdmin(admin.ModelAdmin):
         return False
 
 
-# ========== КАСТОМНАЯ ГЛАВНАЯ СТРАНИЦА АДМИНКИ ==========
 class MyAdminSite(AdminSite):
-    site_header = "Панель управления интернет-магазином"
-    site_title = "Административный портал"
-    index_title = "Добро пожаловать в панель управления"
+
+    def get_formatted_header(self, request):
+        """
+        Формируем заголовок с именем пользователя
+        """
+        base_header = "Панель управления интернет-магазином"
+        
+        if request.user.is_authenticated:
+            # Получаем имя пользователя
+            if request.user.first_name and request.user.last_name:
+                user_name = f"{request.user.first_name} {request.user.last_name}"
+            elif request.user.first_name:
+                user_name = request.user.first_name
+            else:
+                user_name = request.user.email
+            
+            return f"{base_header} | {user_name}"
+        
+        return base_header
+    
+    def each_context(self, request):
+        context = super().each_context(request)
+        context['site_header'] = self.get_formatted_header(request)
+        return context
+
     
     def has_permission(self, request):
         """
@@ -899,7 +875,7 @@ class MyAdminSite(AdminSite):
             return []
         
         # Суперадмины видят ВСЁ
-        if request.user.is_superuser:
+        if is_superuser(request):
             return app_list
         
         # Фильтруем модели в приложении backend
@@ -921,7 +897,7 @@ class MyAdminSite(AdminSite):
                         app_copy['models'].append(model)
                     
                     # МАГАЗИНЫ видят все модели кроме User и Contact
-                    elif request.user.type == 'shop':
+                    elif is_shop_user(request):
                         if model_name not in ['Contact', 'ConfirmEmailToken']:
                             app_copy['models'].append(model)
                 
@@ -932,7 +908,6 @@ class MyAdminSite(AdminSite):
         return filtered_app_list
 
 
-# ========== РЕГИСТРАЦИЯ МОДЕЛЕЙ ==========
 # Создаем кастомный сайт админки
 admin_site = MyAdminSite(name='myadmin')
 
@@ -949,5 +924,5 @@ admin_site.register(OrderItem, OrderItemAdmin)
 admin_site.register(Contact, ContactAdmin)
 admin_site.register(ConfirmEmailToken, ConfirmEmailTokenAdmin)
 
-# Заменяем стандартный admin.site на наш кастомный
+# Заменяем стандартный admin.site на кастомный
 admin.site = admin_site

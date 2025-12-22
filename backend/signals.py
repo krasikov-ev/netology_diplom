@@ -39,40 +39,6 @@ def password_reset_token_created(sender, instance, reset_password_token, **kwarg
     msg.send()
 
 
-# @receiver(post_save, sender=User)
-# def new_user_registered_signal(sender: Type[User], instance: User, created: bool, **kwargs):
-#     """
-#      отправляем письмо с подтрердждением почты
-#     """
-#     if created and not instance.is_active:
-    
-#         token, _ = ConfirmEmailToken.objects.get_or_create(user_id=instance.pk)
-
-#         msg = EmailMultiAlternatives(
-#             # title:
-
-#             "Подтверждение регистрации в интернет магазине",
-#             # message:
-#             f"""
-#             Здравствуйте, {instance.first_name} {instance.last_name}!
-            
-#             Для подтверждения регистрации используйте следующий токен:
-            
-#             {token.key}
-            
-#             Отправьте POST запрос на /api/v1/user/register/confirm с параметрами:
-#             - email
-#             - token
-        
-#             """,
-#             # from:
-#             settings.EMAIL_HOST_USER,
-#             # to:
-#             [instance.email]
-#         )
-#         msg.send()
-
-
 @receiver(post_save, sender=User)
 def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
     """
@@ -110,7 +76,7 @@ def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
 # @receiver(post_save, sender=User)
 # def new_user_registered_signal(sender: Type[User], instance: User, created: bool, **kwargs):
 #     """
-#     Отправляем письмо с подтверждением почты (режим разработки)
+#     Эмулирует отправку  письма с подтверждением почты 
 #     """
 #     if created and not instance.is_active:
 #         try:
@@ -118,26 +84,8 @@ def new_user_registered_signal(sender, instance: User, created: bool, **kwargs):
 #             token, _ = ConfirmEmailToken.objects.get_or_create(user_id=instance.pk)
             
 #             # Логируем (вместо реальной отправки в DEV режиме)
-#             print(f"✅ [DEV MODE] Пользователь {instance.email} зарегистрирован")
-#             print(f"📧 [DEV MODE] Токен подтверждения: {token.key}")
-#             print(f"📧 [DEV MODE] Письмо было бы отправлено в продакшене")
-#             print(f"📧 [DEV MODE] Для активации перейдите по ссылке: /api/v1/user/register/confirm/?token={token.key}")
-            
-#             # В режиме разработки НЕ отправляем реальное письмо
-#             # Если нужно тестировать отправку, раскомментируйте ниже
-            
-#             # msg = EmailMultiAlternatives(
-#             #     f"Password Reset Token for {instance.email}",
-#             #     token.key,
-#             #     settings.EMAIL_HOST_USER,
-#             #     [instance.email]
-#             # )
-#             # msg.send()  # В режиме console.EmailBackend покажет письмо в терминале
-            
-#         except Exception as e:
-#             print(f"⚠️  Ошибка в сигнале регистрации: {e}")
-#             # НЕ ПОДНИМАЕМ ИСКЛЮЧЕНИЕ - пользователь уже создан
-
+#             print(f"Пользователь {instance.email} зарегистрирован")
+#             print(f"Токен подтверждения: {token.key}")       
 
 
 @receiver(new_order)

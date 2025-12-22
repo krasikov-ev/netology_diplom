@@ -26,7 +26,7 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
 
-import requests
+from requests import get
 from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
 from setuptools._distutils.util import strtobool
@@ -252,48 +252,12 @@ class RegisterAccount(APIView):
                     user.type = user_type
                     user.is_staff = True # для пользования админкой
                     user.save()
-
-                    # Создаем токен подтверждения
-                    # token = ConfirmEmailToken.objects.create(user=user)
-                
-                    # self._send_confirmation_email(user, token.key)
                     
                     return JsonResponse({'Status': True})
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
-
- 
-    # def _send_confirmation_email(self, user, token):
-    #     """
-    #     Отправка email
-    #     """
-    #     subject = 'Подтверждение регистрации в интернет магазине'
-        
-    #     message = f"""
-    #     Здравствуйте, {user.first_name} {user.last_name}!
-        
-    #     Для подтверждения регистрации используйте следующий токен:
-        
-    #     {token}
-        
-    #     Отправьте POST запрос на /api/v1/user/register/confirm с параметрами:
-    #     - email: {user.email}
-    #     - token: {token}
-       
-    #     """
-        
-    #     try:
-    #         send_mail(
-    #             subject=subject,
-    #             message=message.strip(),  
-    #             from_email=settings.DEFAULT_FROM_EMAIL,
-    #             recipient_list=[user.email],
-    #         )
-    #         # print(f"email отправлен на: {user.email}")
-    #     except Exception as e:
-    #         print(f"Failed to send email to {user.email}: {str(e)}")
 
 
 class ConfirmAccount(APIView):
@@ -323,11 +287,6 @@ class ConfirmAccount(APIView):
                 
                 token.user.is_active = True
                 token.user.save()
-
-                 # СОЗДАЕМ АВТОРИЗАЦИОННЫЙ ТОКЕН API
-                # from rest_framework.authtoken.models import Token
-                # api_token, created = Token.objects.get_or_create(user=token.user)
-
                 token.delete()
                 return JsonResponse({
                     'Status': True,
@@ -510,12 +469,14 @@ class ShopView(ListAPIView):
     """
     queryset = Shop.objects.filter(state=True).order_by('name')
     serializer_class = ShopSerializer
+    pagination_class = StandardPagination 
 
 
 class ProductInfoView(APIView):
     """
     Класс для поиска и фильтрации товаров
     """
+    pagination_class = StandardPagination 
     def get(self, request: Request, *args, **kwargs):
         """
         Поиск товаров с фильтрацией по  параметрам
@@ -557,12 +518,6 @@ class BasketView(APIView):
             )
 
         try:
-            # basket = Order.objects.filter(
-            # user_id=request.user.id, state='basket').prefetch_related(
-            # 'ordered_items__product_info__product__category',
-            # 'ordered_items__product_info__product_parameters__parameter').annotate(
-            # total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
-
             basket = Order.objects.filter(
             user_id=request.user.id, state='basket').prefetch_related(
             'ordered_items__product_info__product__category',
@@ -585,7 +540,6 @@ class BasketView(APIView):
                     'Data': []
                 })
 
-            # serializer = OrderSerializer(basket, many=True)
             serializer = OrderSerializer(basket)
             return Response(serializer.data)
 
@@ -912,9 +866,6 @@ class ContactView(APIView):
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
         if {'city', 'street', 'phone'}.issubset(request.data):
-            # request.data._mutable = True
-            # request.data.update({'user': request.user.id})
-            # serializer = ContactSerializer(data=request.data)
             contact_data = request.data.copy()
             contact_data['user'] = request.user.id
             serializer = ContactSerializer(data=contact_data)
@@ -990,71 +941,6 @@ class OrderView(APIView):
 
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
-
-  
-    # def post(self, request, *args, **kwargs):
-    #     """
-    #     Оформить заказ из корзины
-    #     {
-    #     "contact": 3
-    #     }
-
-    #     """
-    #     if not request.user.is_authenticated:
-    #         return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-    #     if 'contact' not in request.data:
-    #         return JsonResponse({'Status': False, 'Errors': 'Не указан contact'}, status=400)
-        
-    #     try:
-    #         contact_id = int(request.data['contact'])
-            
-    #         # Находим корзину пользователя. Корзина всегда 1, поэтому в запросе ее не передаем
-    #         basket = Order.objects.filter(
-    #             user_id=request.user.id, 
-    #             state='basket'
-    #         ).first()
-            
-    #         if not basket:
-    #             return JsonResponse({
-    #                 'Status': False, 
-    #                 'Errors': 'Корзина не найдена'
-    #             }, status=400)
-            
-    #         if basket.ordered_items.count() == 0:
-    #             return JsonResponse({
-    #                 'Status': False, 
-    #                 'Errors': 'Корзина пуста'
-    #             }, status=400)
-            
-            # # Оформляем заказ
-            # basket.contact_id = contact_id
-            # basket.state = 'new'
-            # basket.save()
-            
-            # Отправляем сигнал о новом заказе
-            # new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
-            
-            # return JsonResponse({
-            #     'Status': True,
-            #     'Message': f'Заказ #{basket.id} успешно оформлен',
-            #     'Order': {
-            #         'id': basket.id,
-            #         'state': 'new',
-            #         'contact_id': contact_id
-            #     }
-            # })
-                    
-        # except (ValueError, TypeError):
-        #         return JsonResponse({
-        #             'Status': False, 
-        #             'Errors': 'Некорректный формат contact ID'
-        #         }, status=400)
-        # except IntegrityError as error:
-        #         return JsonResponse({
-        #             'Status': False, 
-        #             'Errors': f'Ошибка базы данных: {str(error)}'
-        #         })        
-
 
     def post(self, request, *args, **kwargs):
         """
@@ -1136,8 +1022,6 @@ class OrderView(APIView):
 
 class PartnerOrderItemQuantity(APIView):
     """Изменение количества товаров в заказе"""
-
-
     
     def patch(self, request):
         """
@@ -1283,20 +1167,6 @@ class PartnerOrderStatus(APIView):
         old_status = order.state
         if old_status == new_status:
             return JsonResponse({'Status': True, 'Message': 'Статус не изменился'})
-
-       
-        # if old_status == 'canceled':
-        #     return JsonResponse({
-        #         'Status': False,
-        #         'Error': 'Нельзя изменить статус отмененного заказа'
-        #     }, status=400)
-
-        # if old_status == 'delivered':
-        #     return JsonResponse({
-        #         'Status': False,
-        #         'Error': 'Нельзя изменить статус доставленного заказа'
-        #     }, status=400)
-
         
         # Двигать статус можно только "вперед"
         status_flow = ['new', 'confirmed', 'assembled', 'sent', 'delivered']
@@ -1309,7 +1179,6 @@ class PartnerOrderStatus(APIView):
                     'Error': f'Нельзя изменить статус с "{old_status}" на "{new_status}"'
                 }, status=400)
 
-        
         order.state = new_status
         order.save()
         print(f' {old_status}')
@@ -1323,8 +1192,6 @@ class PartnerOrderStatus(APIView):
             new_status=new_status,
             updated_by=request.user.id
         )
-        
-
 
         return JsonResponse({
             'Status': True,

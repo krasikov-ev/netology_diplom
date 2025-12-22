@@ -41,18 +41,6 @@ class UserSerializer(serializers.ModelSerializer):
             )
         return value
 
-# class UserSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = User
-#         fields = ['first_name', 'last_name', 'email', 'company', 'position']
-    
-#     def validate_email(self, value):
-#         """
-#         Проверка уникальности email в сериализаторе
-#         """
-#         if User.objects.filter(email=value).exists():
-#             raise serializers.ValidationError("Пользователь с таким email уже существует")
-#         return value
     
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:

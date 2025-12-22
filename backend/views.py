@@ -1,44 +1,3 @@
-# from django.shortcuts import render
-# from django.db import transaction
-# # from distutils.util import strtobool
-# import yaml
-# from django.http import HttpResponse
-# from django.utils import timezone
-# from setuptools._distutils.util import strtobool
-# from rest_framework.request import Request
-# from django.contrib.auth import authenticate
-# from django.contrib.auth.password_validation import validate_password
-# from django.core.exceptions import ValidationError
-# from django.core.validators import URLValidator
-# from django.db import IntegrityError
-# from django.db.models import Q, Sum, F
-# from django.http import JsonResponse
-# from requests import get
-# from rest_framework.authtoken.models import Token
-# from rest_framework.generics import ListAPIView
-# from rest_framework.response import Response
-# from rest_framework.views import APIView
-# from django.dispatch import receiver
-# from rest_framework.permissions import IsAuthenticated
-# from rest_framework.authentication import TokenAuthentication, SessionAuthentication
-# from ujson import loads as load_json
-# from yaml import load as load_yaml, Loader
-# from django.utils import timezone
-# from datetime import timedelta
-# from rest_framework.pagination import PageNumberPagination
-# from .models import User, USER_TYPE_CHOICES
-# # from orders.settings import DEFAULT_FROM_EMAIL
-# from django.core.mail import send_mail
-# from django.conf import settings
-
-
-# from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
-#     Contact, ConfirmEmailToken
-# from backend.serializers import UserSerializer, CategorySerializer, ShopSerializer, ProductInfoSerializer, \
-#     OrderItemSerializer, OrderSerializer, ContactSerializer, PartnerOrderItemUpdateSerializer, PartnerOrderStatusSerializer
-# from backend.signals import  new_order, order_status_changed, order_item_quantity_changed
-
-
 
 import yaml
 from datetime import timedelta
@@ -1032,134 +991,148 @@ class OrderView(APIView):
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
 
+  
     # def post(self, request, *args, **kwargs):
     #     """
     #     Оформить заказ из корзины
+    #     {
+    #     "contact": 3
+    #     }
+
     #     """
     #     if not request.user.is_authenticated:
     #         return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+    #     if 'contact' not in request.data:
+    #         return JsonResponse({'Status': False, 'Errors': 'Не указан contact'}, status=400)
+        
+    #     try:
+    #         contact_id = int(request.data['contact'])
+            
+    #         # Находим корзину пользователя. Корзина всегда 1, поэтому в запросе ее не передаем
+    #         basket = Order.objects.filter(
+    #             user_id=request.user.id, 
+    #             state='basket'
+    #         ).first()
+            
+    #         if not basket:
+    #             return JsonResponse({
+    #                 'Status': False, 
+    #                 'Errors': 'Корзина не найдена'
+    #             }, status=400)
+            
+    #         if basket.ordered_items.count() == 0:
+    #             return JsonResponse({
+    #                 'Status': False, 
+    #                 'Errors': 'Корзина пуста'
+    #             }, status=400)
+            
+            # # Оформляем заказ
+            # basket.contact_id = contact_id
+            # basket.state = 'new'
+            # basket.save()
+            
+            # Отправляем сигнал о новом заказе
+            # new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
+            
+            # return JsonResponse({
+            #     'Status': True,
+            #     'Message': f'Заказ #{basket.id} успешно оформлен',
+            #     'Order': {
+            #         'id': basket.id,
+            #         'state': 'new',
+            #         'contact_id': contact_id
+            #     }
+            # })
+                    
+        # except (ValueError, TypeError):
+        #         return JsonResponse({
+        #             'Status': False, 
+        #             'Errors': 'Некорректный формат contact ID'
+        #         }, status=400)
+        # except IntegrityError as error:
+        #         return JsonResponse({
+        #             'Status': False, 
+        #             'Errors': f'Ошибка базы данных: {str(error)}'
+        #         })        
 
-    #     if {'id', 'contact'}.issubset(request.data):
-    #         if request.data['id'].isdigit():
-    #             try:
-    #                 is_updated = Order.objects.filter(
-    #                     user_id=request.user.id, id=request.data['id']).update(
-    #                     contact_id=request.data['contact'],
-    #                     state='new')
-    #             except IntegrityError as error:
-    #                 print(error)
-    #                 return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
-    #             else:
-    #                 if is_updated:
-    #                     new_order.send(sender=self.__class__, user_id=request.user.id)
-    #                     return JsonResponse({'Status': True})
 
-    #     return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status = 400)
-    
     def post(self, request, *args, **kwargs):
         """
-        Оформить заказ из корзины
-        {
+        Оформить заказ из корзины - создаем отдельный заказ для каждого магазина.
+        Иначе при изменении статуса заказа одним магазином, статус меняется для всех
+         {
         "contact": 3
         }
-
         """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        
         if 'contact' not in request.data:
             return JsonResponse({'Status': False, 'Errors': 'Не указан contact'}, status=400)
         
         try:
             contact_id = int(request.data['contact'])
-            
             # Находим корзину пользователя. Корзина всегда 1, поэтому в запросе ее не передаем
             basket = Order.objects.filter(
                 user_id=request.user.id, 
                 state='basket'
             ).first()
             
-            if not basket:
-                return JsonResponse({
-                    'Status': False, 
-                    'Errors': 'Корзина не найдена'
-                }, status=400)
+            if not basket or basket.ordered_items.count() == 0:
+                return JsonResponse({'Status': False, 'Errors': 'Корзина пуста'}, status=400)
             
-            if basket.ordered_items.count() == 0:
-                return JsonResponse({
-                    'Status': False, 
-                    'Errors': 'Корзина пуста'
-                }, status=400)
+            # Группируем товары по магазинам
+            shop_items = {}
+            # Все товары в корзине
+            for item in basket.ordered_items.all():
+                shop_id = item.product_info.shop_id
+                if shop_id not in shop_items:
+                    shop_items[shop_id] = []
+                shop_items[shop_id].append(item)
             
-            # Оформляем заказ
-            basket.contact_id = contact_id
-            basket.state = 'new'
-            basket.save()
+            created_orders = []
             
-            # Отправляем сигнал о новом заказе
-            new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
+            # Создаем отдельный заказ для каждого магазина
+            for shop_id, items in shop_items.items():
+                # Создаем новый заказ для этого магазина
+                new_order_obj = Order.objects.create(
+                    user=request.user,
+                    contact_id=contact_id,
+                    state='new',
+                    dt=timezone.now()
+                )
+                
+                # Переносим товары этого магазина в новый заказ
+                for item in items:
+                    item.order = new_order_obj
+                    item.save()
+                
+                created_orders.append({
+                    'id': new_order_obj.id,
+                    'shop': Shop.objects.get(id=shop_id).name,
+                    'items_count': len(items)
+                })
+            
+            # Удаляем старую корзину
+            basket.delete()
+            
+            # Отправляем сигналы для каждого заказа
+            for order_data in created_orders:
+                new_order.send(
+                    sender=self.__class__, 
+                    user_id=request.user.id, 
+                    order_id=order_data['id']
+                )
             
             return JsonResponse({
                 'Status': True,
-                'Message': f'Заказ #{basket.id} успешно оформлен',
-                'Order': {
-                    'id': basket.id,
-                    'state': 'new',
-                    'contact_id': contact_id
-                }
+                'Message': f'Создано {len(created_orders)} заказа(ов)',
+                'Orders': created_orders
             })
-                    
-        except (ValueError, TypeError):
-                return JsonResponse({
-                    'Status': False, 
-                    'Errors': 'Некорректный формат contact ID'
-                }, status=400)
-        except IntegrityError as error:
-                return JsonResponse({
-                    'Status': False, 
-                    'Errors': f'Ошибка базы данных: {str(error)}'
-                })        
+        
+        except Exception as e:
+            return JsonResponse({'Status': False, 'Errors': str(e)}, status=400)
 
-        # if {'id', 'contact'}.issubset(request.data):
-        #     try:
-        #         # Пробуем преобразовать id в число (обрабатываем и строку, и int)
-        #         order_id = int(request.data['id'])
-        #         contact_id = int(request.data['contact'])
-                
-        #         is_updated = Order.objects.filter(
-        #             user_id=request.user.id, 
-        #             id=order_id,
-        #             state='basket'  # Добавляем фильтр по статусу 'basket'
-        #         ).update(
-        #             contact_id=contact_id,
-        #             state='new'
-        #         )
-                
-        #         if is_updated:
-        #             # Отправляем сигнал о новом заказе
-        #             new_order.send(sender=self.__class__, user_id=request.user.id, order_id=request.order.id)
-        #             return JsonResponse({'Status': True})
-        #         else:
-        #             return JsonResponse({
-        #                 'Status': False, 
-        #                 'Errors': 'Корзина не найдена или уже оформлена'
-        #             }, status=400)
-                    
-        #     except (ValueError, TypeError):
-        #         return JsonResponse({
-        #             'Status': False, 
-        #             'Errors': 'Некорректный формат ID'
-        #         }, status=400)
-        #     except IntegrityError as error:
-        #         return JsonResponse({
-        #             'Status': False, 
-        #             'Errors': f'Ошибка базы данных: {str(error)}'
-        #         })
-
-        # return JsonResponse({
-        #     'Status': False, 
-        #     'Errors': 'Не указаны все необходимые аргументы'
-        # }, status=400)
-    
 
 class PartnerOrderItemQuantity(APIView):
     """Изменение количества товаров в заказе"""

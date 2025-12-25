@@ -1,0 +1,86 @@
+
+services:
+  redis: 
+    image: redis:7-alpine
+    container_name: diplom_redis
+    networks:
+      - diplom
+  
+  # PostgreSQL база данных
+  db:
+    image: postgres:15-alpine
+    container_name: diplom_db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"  # у меня постгрес на 5434
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - diplom
+
+  # Django приложение
+  web:
+    build: .
+    container_name: diplom_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      # Настройки БД
+      DB_NAME: ${DB_NAME}
+      DB_HOST: db  
+      DB_PORT: 5432  
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+      # Настройки email
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-True}
+      
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - diplom
+
+  # Celery worker
+  celery_worker:
+    build: .
+    container_name: diplom_celery_worker
+    command: celery -A celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      # Настройки базы данных
+      DB_NAME: ${DB_NAME}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+    depends_on:
+      - db
+      - web
+      - redis
+    networks:
+      - diplom
+
+networks:
+  diplom:
+    driver: bridge
+
+volumes:
+  postgres_data:

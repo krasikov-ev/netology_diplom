@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_rest_passwordreset',
     'backend',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -171,3 +172,10 @@ REST_FRAMEWORK = {
     ),
 
 }
+
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_TIMEZONE = 'Europe/Moscow'
+# CELERY_BROKER_URL = 'django-db'
+# CELERY_RESULT_BACKEND = 'django-db'docker-compose down

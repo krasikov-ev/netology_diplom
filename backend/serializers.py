@@ -11,6 +11,7 @@ class ContactSerializer(serializers.ModelSerializer):
             'user': {'write_only': True}
         }
 
+
 class UserSerializer(serializers.ModelSerializer):
     contacts = ContactSerializer(read_only=True, many=True)
     type = serializers.ChoiceField(
@@ -150,6 +151,7 @@ class PartnerOrderItemUpdateSerializer(serializers.Serializer):
         
         return value
     
+
 class PartnerOrderStatusSerializer(serializers.Serializer):
     """Валидация запроса на изменение статуса заказа"""
     

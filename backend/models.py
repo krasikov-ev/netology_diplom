@@ -179,6 +179,7 @@ class ProductInfo(models.Model):
         shop_name = self.shop.name if self.shop else 'Без магазина'
         return f"{product_name} - {shop_name} (модель: {self.model})"
 
+
 class Parameter(models.Model):
     # objects = models.manager.Manager()
     name = models.CharField(max_length=40, verbose_name='Название')

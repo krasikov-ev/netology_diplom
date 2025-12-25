@@ -1161,7 +1161,7 @@ class PartnerOrderStatus(APIView):
             id=order_id,
             ordered_items__product_info__shop__user_id=request.user.id,
             state__in=['new', 'confirmed', 'assembled', 'sent']  
-        )
+        ).distinct().first()
 
         #  Проверяем, что статус  изменился
         old_status = order.state

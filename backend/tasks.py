@@ -143,7 +143,7 @@ def send_order_item_quantity_changed_email_task(order_id, user_id, changes):
         
         if updated_items:
             if removed_items:
-                message_text.append("")  
+                message_text.append("\n")  
             message_text.append("Измененные количества товаров:")
             for item in updated_items:
                 message_text.append(f"  - {item.get('product_name', 'Товар')}: {item.get('old_quantity', 0)} → {item.get('new_quantity', 0)} шт.")

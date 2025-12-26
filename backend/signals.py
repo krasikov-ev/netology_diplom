@@ -1,12 +1,10 @@
-from typing import Type
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db.models.signals import post_save
 from django.dispatch import receiver, Signal
 from django_rest_passwordreset.signals import reset_password_token_created
 
-from backend.models import ConfirmEmailToken, User, Order
+from backend.models import ConfirmEmailToken, User
 from backend.tasks import (
     send_new_order_email_task,
     send_password_reset_email_task,

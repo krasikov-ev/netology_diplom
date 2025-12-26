@@ -120,7 +120,7 @@ class ShopFilter(SimpleListFilter):
 
 
 class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
-    """Товары в заказе - магазины могут менять количество и удалять свои товары"""
+    """Товары в заказе"""
     model = OrderItem
     extra = 0
     fields = ['product_info', 'quantity', 'get_price', 'get_total']
@@ -283,6 +283,9 @@ class CustomUserAdmin(UserAdmin):
 
 
 class ShopAdmin(ReadOnlyAdmin):
+    """
+    Панель управления магазинами
+    """
     list_display = ('name', 'user_email', 'url', 'state')
     list_filter = ('state',)
     search_fields = ('name', 'user__email', 'url')
@@ -294,6 +297,9 @@ class ShopAdmin(ReadOnlyAdmin):
 
 
 class CategoryAdmin(ReadOnlyAdmin):
+    """
+    Панель управления категориями
+    """
     list_display = ('name', 'get_shops_count', 'get_products_count')
     search_fields = ('name',)
     ordering = ('name',)
@@ -309,6 +315,9 @@ class CategoryAdmin(ReadOnlyAdmin):
 
 
 class ProductAdmin(ReadOnlyAdmin):
+    """
+    Панель управления продуктами
+    """
     list_display = ('name', 'category', 'display_parameters')
     list_filter = ('category',)
     search_fields = ('name',)
@@ -320,6 +329,9 @@ class ProductAdmin(ReadOnlyAdmin):
 
 
 class ProductInfoAdmin(ReadOnlyAdmin):
+    """
+    Панель управления информацией о продуктах
+    """
     list_display = ('get_product_name', 'shop', 'model', 'price', 'price_rrc', 'quantity', 'category_display')
     list_filter = (ShopFilter, 'product__category')
     search_fields = ('product__name', 'model')
@@ -335,6 +347,9 @@ class ProductInfoAdmin(ReadOnlyAdmin):
 
 
 class ParameterAdmin(ReadOnlyAdmin):
+    """
+    Панель управления параметрами
+    """
     list_display = ('name', 'get_products_count')
     search_fields = ('name',)
     
@@ -344,6 +359,9 @@ class ParameterAdmin(ReadOnlyAdmin):
 
 
 class ProductParameterAdmin(ReadOnlyAdmin):
+    """
+    Панель управления параметрами продуктов
+    """
     list_display = ('get_product_name', 'parameter', 'value', 'get_shop')
     list_filter = ('parameter',)
     search_fields = ('product_info__product__name', 'parameter__name')
@@ -358,6 +376,9 @@ class ProductParameterAdmin(ReadOnlyAdmin):
 
 
 class OrderAdmin(admin.ModelAdmin):
+    """
+    Панель управления заказами
+    """  
     list_display = ('id', 'dt', 'state', 'user_email', 'contact_info', 'display_total_sum', 'items_count')
     list_filter = ('state', 'dt')
     search_fields = ('id', 'user__email', 'contact__phone')
@@ -365,15 +386,6 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline]
     actions = ['mark_as_confirmed', 'mark_as_assembled', 'mark_as_sent', 'mark_as_delivered', 'mark_as_canceled']
     
-    # fieldsets = (
-    #     (None, {
-    #         'fields': ('user', 'state', 'contact')
-    #     }),
-    #     ('Информация о заказе', {
-    #         'fields': ('dt', 'updated_at', 'display_total_calculated'),
-    #         'classes': ('collapse',)
-    #     }),
-    # )
     def get_fieldsets(self, request, obj=None):
         """Динамическое определение fieldsets"""
         if is_superuser(request) and not obj:
@@ -441,7 +453,7 @@ class OrderAdmin(admin.ModelAdmin):
         if not request.user.is_authenticated:
             return qs.none()
         
-        # Суперадмины видят ВСЁ
+        # Суперадмины видят все
         if is_superuser(request):
             return qs
         
@@ -584,7 +596,10 @@ class OrderAdmin(admin.ModelAdmin):
     mark_as_canceled.short_description = "Отменить выбранные заказы"
 
 
-class OrderItemAdmin(BaseOrderItemAdmin, admin.ModelAdmin):  
+class OrderItemAdmin(BaseOrderItemAdmin, admin.ModelAdmin):
+    """
+    Панель управления товарами в заказе
+    """  
     list_display = ('id', 'order_link', 'product_name', 'shop_name', 'quantity', 'price_per_item', 'total_price')
     list_filter = ('product_info__shop',)
     search_fields = ('order__id', 'product_info__product__name')

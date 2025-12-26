@@ -140,12 +140,6 @@ AUTH_USER_MODEL = 'backend.User'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-# EMAIL_HOST = 'smtp.mail.ru'
-# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-# EMAIL_PORT = 465
-# EMAIL_USE_SSL = True
-# SERVER_EMAIL = EMAIL_HOST_USER
-
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.mail.ru')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 465))
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'
@@ -177,5 +171,3 @@ REST_FRAMEWORK = {
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_TIMEZONE = 'Europe/Moscow'
-# CELERY_BROKER_URL = 'django-db'
-# CELERY_RESULT_BACKEND = 'django-db'docker-compose down

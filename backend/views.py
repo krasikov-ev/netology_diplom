@@ -1155,13 +1155,16 @@ class PartnerOrderStatus(APIView):
         if request.user.type != 'shop':
             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
 
-        # Ищем заказы, статус которых можно менять
-        order = get_object_or_404(
-            Order,
+        order = Order.objects.filter(
             id=order_id,
-            ordered_items__product_info__shop__user_id=request.user.id,
-            state__in=['new', 'confirmed', 'assembled', 'sent']  
+            ordered_items__product_info__shop__user_id=request.user.id
         ).distinct().first()
+
+        if not order:
+            return JsonResponse({
+                'Status': False,
+                'Error': f'Заказ #{order_id} не найден или недоступен'
+            }, status=404)
 
         #  Проверяем, что статус  изменился
         old_status = order.state

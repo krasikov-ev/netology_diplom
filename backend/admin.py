@@ -147,7 +147,7 @@ class OrderItemInline(BaseOrderItemAdmin, admin.TabularInline):
     get_total.short_description = 'Сумма'
     
     def has_add_permission(self, request, obj):
-        return False
+        return is_superuser(request)
     
     def has_delete_permission(self, request, obj=None):
         """Магазины могут удалять только свои позиции"""
@@ -365,16 +365,46 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline]
     actions = ['mark_as_confirmed', 'mark_as_assembled', 'mark_as_sent', 'mark_as_delivered', 'mark_as_canceled']
     
-    fieldsets = (
-        (None, {
-            'fields': ('user', 'state', 'contact')
-        }),
-        ('Информация о заказе', {
-            'fields': ('dt', 'updated_at', 'display_total_calculated'),
-            'classes': ('collapse',)
-        }),
-    )
-    
+    # fieldsets = (
+    #     (None, {
+    #         'fields': ('user', 'state', 'contact')
+    #     }),
+    #     ('Информация о заказе', {
+    #         'fields': ('dt', 'updated_at', 'display_total_calculated'),
+    #         'classes': ('collapse',)
+    #     }),
+    # )
+    def get_fieldsets(self, request, obj=None):
+        """Динамическое определение fieldsets"""
+        if is_superuser(request) and not obj:
+            # Суперадмин создает новый заказ 
+            return (
+                (None, {
+                    'fields': ('user', 'state', 'contact')
+                }),
+            )
+        elif is_superuser(request) and obj:
+            # Суперадмин редактирует существующий заказ
+            return (
+                (None, {
+                    'fields': ('user', 'state', 'contact')
+                }),
+                ('Информация о заказе', {
+                    'fields': ('dt', 'updated_at'),
+                    'classes': ('collapse',)
+                }),
+            )
+
+        # покупатели и магазины
+        return (
+            (None, {'fields': ('user', 'state', 'contact')}),
+            ('Информация о заказе', {
+                'fields': ('dt', 'updated_at', 'display_total_calculated'),
+                'classes': ('collapse',)
+            }),
+        )
+
+
     def user_email(self, obj):
         return obj.user.email if obj.user else '-'
     user_email.short_description = 'Пользователь'
@@ -452,7 +482,14 @@ class OrderAdmin(admin.ModelAdmin):
         if request.user.is_authenticated and request.user.type == 'shop':
             return [field for field in base_list if field != 'user_email']
         return base_list
-    
+
+    def get_readonly_fields(self, request, obj=None):
+        """Для суперадминов - нет readonly, для остальных - все поля"""
+        if is_superuser(request):
+            if obj:  
+                return ['dt', 'updated_at']
+            else:  
+                return []  
     def has_module_permission(self, request):
         """Все staff пользователи видят заказы в меню"""
         return request.user.is_authenticated and request.user.is_staff
@@ -485,11 +522,9 @@ class OrderAdmin(admin.ModelAdmin):
         return False
     
     def has_add_permission(self, request):
-        """Никто не может создавать заказы"""
-        return False
+        return is_superuser(request)
     
     def has_delete_permission(self, request, obj=None):
-        """Только суперадмины могут удалять заказы"""
         return is_superuser(request)
     
     #  Действия со статусом
@@ -651,8 +686,7 @@ class OrderItemAdmin(BaseOrderItemAdmin, admin.ModelAdmin):
         return False
     
     def has_add_permission(self, request):
-        """Никто не может создать"""
-        return False
+        return is_superuser(request)
     
     def get_readonly_fields(self, request, obj=None):
         """Настраиваем readonly поля в зависимости от пользователя"""
